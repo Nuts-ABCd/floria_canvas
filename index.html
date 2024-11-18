@@ -1,0 +1,364 @@
+<html>
+
+<head>
+<meta charset="utf-8">
+<script language="JavaScript">
+
+	// 定数定義
+	const GRID_SIZE = 1400;
+	const GRID_NUM  = 11;
+	const GRID_MAX  = GRID_SIZE * GRID_NUM;
+	const GRID_PADDING = 20;
+	const MODE_NONE = 0;
+	const MODE_LINE = 1;
+	const MODE_FILL = 2;
+
+	// クラス定義
+	class Point {
+		constructor(x, y){
+			this.X = x;
+			this.Y = y;
+		};
+		get drawX(){ return Math.round(this.X / scale) + GRID_PADDING };
+		get drawY(){ return Math.round(this.Y / scale) + GRID_PADDING };
+		draw(ctx, color){
+			ctx.fillStyle = color;
+			ctx.beginPath();
+			ctx.arc(this.drawX, this.drawY, 5, 0, 2 * Math.PI);
+			ctx.closePath();
+			ctx.fill();
+		};
+		equals(p){
+			return (this.X == p.X && this.Y == p.Y);
+		};
+		getDistance(p){
+			return Math.sqrt(Math.abs(this.X - p.X) ** 2 + Math.abs(this.Y - p.Y) ** 2);
+		};
+		toString = function(){
+			return "(" + this.X + ", " + this.Y + ")";
+		};
+	};
+	class Line {
+		constructor(arg1, arg2, arg3, arg4){
+			if(arg3 !== undefined && arg4 !== undefined){
+				this.p1 = new Point(arg1, arg2);
+				this.p2 = new Point(arg3, arg4);
+			}else{
+				this.p1 = arg1;
+				this.p2 = arg2;
+			}
+		};
+		draw(ctx, color){
+			ctx.strokeStyle = color;
+			ctx.lineWidth = 0.5;
+			ctx.beginPath();
+			ctx.moveTo(this.p1.drawX, this.p1.drawY);
+			ctx.lineTo(this.p2.drawX, this.p2.drawY);
+			ctx.closePath();
+			ctx.stroke();
+		};
+		toString = function(){
+			return "[" + this.p1.toString() + " - " + this.p2.toString() + "]";
+		};
+	};
+	class Fill {
+		constructor(ary){
+			this.plist = ary;
+		};
+		draw(ctx, color){
+			ctx.fillStyle = color;
+			ctx.beginPath();
+			ctx.moveTo(this.plist[0].drawX, this.plist[0].drawY);
+			for(var i = 1; i < this.plist.length; i++){
+				ctx.lineTo(this.plist[i].drawX, this.plist[i].drawY);
+			};
+			ctx.closePath();
+			ctx.fill();
+		};
+	};
+	class ExCanvas {
+		constructor(name, z, color){
+			this.cvs = document.getElementById(name);
+			this.cvs.style.position = "absolute";
+			this.cvs.style.top = "30";
+			this.cvs.style["z-index"] = z;
+			this.obj = [];
+			this.color = color;
+		};
+		addObject(obj){
+			this.obj.push(obj);
+		};
+		setScale = function(){
+			this.cvs.width  = GRID_PADDING * 2 + GRID_MAX / scale;
+			this.cvs.height = GRID_PADDING * 2 + GRID_MAX / scale;
+		};
+		redraw(){
+			var ctx = this.cvs.getContext("2d");
+			ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+			for(var i = 0; i < this.obj.length; i++){
+				this.obj[i].draw(ctx, this.color);
+			};
+		};
+	};
+
+	var cvsGrid;
+	var cvsLine;
+	var cvsFill;
+	var cvsTemp;
+	var canvas;
+	var btnMode;
+	var scale = 21;
+	var mode  = MODE_LINE;
+
+	var initialize = function(){
+		btnMode = document.getElementById("btnMode");
+		cvsFill = new ExCanvas("cvsFill", 0, "#00C0FF");
+		cvsGrid = new ExCanvas("cvsGrid", 1, "#808080");
+		cvsLine = new ExCanvas("cvsLine", 2, "#0000FF");
+		cvsTemp = new ExCanvas("cvsTemp", 3, "#FF0000");
+		canvas  = [cvsGrid, cvsLine, cvsFill, cvsTemp];
+		initGrid();
+		initLine();
+		initTemp();
+		redrawAll();
+	};
+
+	var initGrid = function(){
+		for(var i = 0; i <= GRID_NUM; i++){
+			cvsGrid.addObject(new Line(
+				i * GRID_SIZE, 0,
+				i * GRID_SIZE, GRID_MAX
+			));
+			cvsGrid.addObject(new Line(
+				0,        i * GRID_SIZE,
+				GRID_MAX, i * GRID_SIZE
+			));
+		};
+	};
+
+	var initLine = function(){
+		cvsLine.points = [];
+		cvsLine.addLines = function(ary){
+			for(var i = 0; i < ary.length; i++){
+				for(var j = 0; j < cvsLine.obj.length; j++){
+					var p = getCrossPos(ary[i], cvsLine.obj[j]);
+					if(p){
+						cvsLine.points.push(p);
+						//console.log(p.toString());
+					};
+				};
+			};
+			cvsLine.obj = cvsLine.obj.concat(ary);
+		};
+		cvsLine.getNearPoint = function(x, y){
+			var ret;
+			var p = new Point(x, y);
+			var minDis = GRID_MAX;
+			for(var i = 0; i < cvsLine.points.length; i++){
+				var d = cvsLine.points[i].getDistance(p);
+				if(d < minDis){
+					ret = cvsLine.points[i];
+					minDis = d;
+				};
+			};
+			return ret;
+		};
+		cvsLine.addObject(new Line(0, 0, GRID_MAX, GRID_MAX));
+	};
+
+	var initTemp = function(){
+		cvsTemp.isComplete;
+		cvsTemp.points;
+		cvsTemp.lines;
+		cvsTemp.getPoints = function(){
+			return cvsTemp.getObjects(cvsTemp.points);
+		};
+		cvsTemp.getLines = function(){
+			return cvsTemp.getObjects(cvsTemp.lines);
+		};
+		cvsTemp.getObjects = function(ary){
+			var ret = [];
+			for(var i = 0; i < ary.length; i++){
+				ret.push(ary[i]);
+			};
+			return ret;
+		};
+		cvsTemp.clearObjects = function(){
+			cvsTemp.isComplete = false;
+			cvsTemp.points = [];
+			cvsTemp.lines  = [];
+			cvsTemp.obj    = [];
+		};
+		cvsTemp.mouseMove = function(event){
+
+			if(cvsTemp.isComplete){ return; }
+			var len = cvsTemp.points.length;
+
+			if(len > 0){
+				cvsTemp.points.pop();
+			};
+			cvsTemp.points.push(getMousePos(event));
+
+			if(len >= 2){
+				cvsTemp.lines.pop();
+				cvsTemp.addLine();
+			};
+
+			cvsTemp.obj = cvsTemp.points.concat(cvsTemp.lines);
+			cvsTemp.redraw();
+
+		};
+		cvsTemp.mouseUp = function(event){
+
+			if(cvsTemp.isComplete){ return; }
+			var pos = getMousePos(event);
+			var len = cvsTemp.points.length;
+
+			if(len == 1){
+				cvsTemp.points.push(pos);
+			}else{
+				if(pos.equals(cvsTemp.points[0])){
+					switch(mode){
+						case MODE_LINE: return;
+						case MODE_FILL: cvsTemp.isComplete = true; break;
+					};
+				};
+				cvsTemp.points.push(pos);
+				cvsTemp.addLine();
+				if(mode == MODE_LINE){
+					cvsTemp.isComplete = true;
+				};
+			};
+
+		};
+		cvsTemp.addLine = function(){
+			var len = cvsTemp.points.length;
+			cvsTemp.lines.push(new Line(cvsTemp.points[len - 2], cvsTemp.points[len - 1]));
+		};
+		cvsTemp.cvs.addEventListener("mousemove", cvsTemp.mouseMove, false);
+		cvsTemp.cvs.addEventListener("mouseup",   cvsTemp.mouseUp,   false);
+		cvsTemp.clearObjects();
+	};
+
+	var getMousePos = function(event){
+
+		var posX = 0;
+		var posY = 0;
+		var ret;
+		var rect = event.target.getBoundingClientRect();
+
+		posX = (event.clientX - rect.left - GRID_PADDING) * scale;
+		posY = (event.clientY - rect.top  - GRID_PADDING) * scale;
+
+		switch(mode){
+			case MODE_LINE:
+				ret = new Point(
+					Math.round(posX / GRID_SIZE) * GRID_SIZE,
+					Math.round(posY / GRID_SIZE) * GRID_SIZE
+				);
+				break;
+			case MODE_FILL:
+				ret = cvsLine.getNearPoint(posX, posY);
+				break;
+		};
+
+		return ret;
+	};
+
+	var getCrossPos = function (line1, line2) {
+
+		var x0 = line1.p1.X;
+		var y0 = line1.p1.Y;
+		var x1 = line1.p2.X;
+		var y1 = line1.p2.Y;
+		var x2 = line2.p1.X;
+		var y2 = line2.p1.Y;
+		var x3 = line2.p2.X;
+		var y3 = line2.p2.Y;
+
+		var a0 = x3 - x2;
+		var a1 = y3 - y2;
+		var b0 = (a0 * (y0 - y2) - a1 * (x0 - x2)) / 2;
+		var b1 = (a0 * (y2 - y1) - a1 * (x2 - x1)) / 2;
+
+		var x = x0 + (x1 - x0) * b0 / (b0 + b1);
+		var y = y0 + (y1 - y0) * b0 / (b0 + b1);
+
+		var overlap =	(x >= x0 || x >= x1) && (x <= x0 || x <= x1) &&
+						(y >= y0 || y >= y1) && (y <= y0 || y <= y1) &&
+						(x >= x2 || x >= x3) && (x <= x2 || x <= x3) &&
+						(y >= y2 || y >= y3) && (y <= y2 || y <= y3)
+
+		var parallelLine =	(Math.abs(x) === Infinity && isNaN(y)) ||
+							(isNaN(x) && Math.abs(y) === Infinity) ||
+							(Math.abs(x) === Infinity && Math.abs(y) === Infinity);
+
+		return (!overlap || parallelLine) ? undefined : new Point(Math.round(x), Math.round(y));
+
+	};
+
+	var setLine = function(){
+		cvsLine.addLines(cvsTemp.getLines());
+		cvsLine.redraw();
+	};
+	var setFill = function(){
+		cvsFill.addObject(new Fill(cvsTemp.getPoints()));
+		cvsFill.redraw();
+	};
+	var redrawAll = function(){
+		for(var i = 0; i < canvas.length; i++){
+			canvas[i].setScale();
+			canvas[i].redraw();
+		};
+	};
+
+	var chmod = function(){
+		switch(mode){
+			case MODE_LINE: mode = MODE_FILL; btnMode.value = "塗"; break;
+			case MODE_FILL: mode = MODE_LINE; btnMode.value = "線"; break;
+		};
+		calcel();
+	};
+	var submit = function(){
+		switch(mode){
+			case MODE_LINE: setLine(); break;
+			case MODE_FILL: setFill(); break;
+		};
+		calcel();
+	};
+	var calcel = function(){
+		cvsTemp.clearObjects();
+		cvsTemp.redraw();
+	};
+	var scaleUp = function(){
+		setScale(-1);
+	};
+	var scaleDown = function(){
+		setScale(1);
+	};
+	var setScale = function(dir){
+		diff = dir * 6;
+		if(scale + diff >= 3){
+			scale += diff;
+			redrawAll();
+		};
+	};
+
+</script>
+</head>
+
+<body onload="initialize()">
+	<canvas id="cvsGrid"></canvas>
+	<canvas id="cvsLine"></canvas>
+	<canvas id="cvsFill"></canvas>
+	<canvas id="cvsTemp"></canvas>
+	<div id="menu" style="position:fixed; z-index:5;">
+		<input id="btnScaleUp"   type="button" value="＋"         onclick="scaleUp()" />
+		<input id="btnScaleDown" type="button" value="－"         onclick="scaleDown()" />
+		<input id="btnMode"      type="button" value="線"         onclick="chmod()" />
+		<input id="btnSubmit"    type="button" value="決定"       onclick="submit()" />
+		<input id="btnCancel"    type="button" value="キャンセル" onclick="calcel()" />
+	</div>
+</body>
+
+</html>
