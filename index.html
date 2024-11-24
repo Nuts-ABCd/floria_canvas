@@ -2,16 +2,26 @@
 
 <head>
 <meta charset="utf-8">
+<title>翠緑のフローリア 魔法脈描画ツール</title>
 <script language="JavaScript">
 
 	// 定数定義
-	const GRID_SIZE = 1400;
-	const GRID_NUM  = 11;
-	const GRID_MAX  = GRID_SIZE * GRID_NUM;
+	const GRID_SIZE    = 1400;
+	const GRID_NUM     = 11;
+	const GRID_MAX     = GRID_SIZE * GRID_NUM;
 	const GRID_PADDING = 20;
-	const MODE_NONE = 0;
-	const MODE_LINE = 1;
-	const MODE_FILL = 2;
+	const SCALE_MAX    = 21;
+	const SCALE_MIN    = 3;
+	const POINT_SIZE   = 5;
+	const MODE_NONE    = 0;
+	const MODE_LINE    = 11;
+	const MODE_SHAPE   = 12;
+	const MODE_FILL    = 13;
+	const MODE_DAMAGE  = 14;
+	const MODE_DEL_L   = 21;
+	const MODE_DEL_S   = 22;
+	const MODE_DEL_F   = 23;
+	const MODE_DEL_D   = 24;
 
 	// クラス定義
 	class Point {
@@ -19,17 +29,28 @@
 			this.X = x;
 			this.Y = y;
 		};
-		get drawX(){ return Math.round(this.X / scale) + GRID_PADDING };
-		get drawY(){ return Math.round(this.Y / scale) + GRID_PADDING };
+		get drawX(){ return Math.round(this.X / scale) + GRID_PADDING; };
+		get drawY(){ return Math.round(this.Y / scale) + GRID_PADDING; };
+		copy(){
+			return new Point(this.X, this.Y);
+		};
 		draw(ctx, color){
 			ctx.fillStyle = color;
 			ctx.beginPath();
-			ctx.arc(this.drawX, this.drawY, 5, 0, 2 * Math.PI);
+			ctx.arc(this.drawX, this.drawY, POINT_SIZE, 0, 2 * Math.PI);
 			ctx.closePath();
 			ctx.fill();
 		};
 		equals(p){
 			return (this.X == p.X && this.Y == p.Y);
+		};
+		inAry(ary){
+			for(var i = 0; i < ary.length; i++){
+				if(this.equals(ary[i])){
+					return i;
+				};
+			};
+			return -1;
 		};
 		getDistance(p){
 			return Math.sqrt(Math.abs(this.X - p.X) ** 2 + Math.abs(this.Y - p.Y) ** 2);
@@ -38,15 +59,51 @@
 			return "(" + this.X + ", " + this.Y + ")";
 		};
 	};
-	class Line {
+	class SqrPoint extends Point {
+		draw(ctx, color){
+			if(this.isInArea){
+				ctx.fillStyle = color;
+				this.getFill().draw(ctx, color);
+			};
+		};
+		get isInArea(){
+			return (0 <= this.X && this.X < GRID_MAX && 0 <= this.Y && this.Y < GRID_MAX);
+		};
+		getFill(){
+			return new Fill([
+				new Point(this.X, this.Y),
+				new Point(this.X + GRID_SIZE, this.Y),
+				new Point(this.X + GRID_SIZE, this.Y + GRID_SIZE),
+				new Point(this.X, this.Y + GRID_SIZE)
+			]);
+		};
+	};
+	class BaseShape {
+		constructor(){
+			this.plist = [];
+		};
+		equals(obj){
+			var cnt = 0;
+			for(var i = 0; i < this.plist.length; i++){
+				if(this.plist[i].inAry(obj.plist) >= 0){
+					cnt++;
+				};
+			};
+			return (cnt == this.plist.length);
+		};
+	};
+	class Line extends BaseShape {
 		constructor(arg1, arg2, arg3, arg4){
+			super();
 			if(arg3 !== undefined && arg4 !== undefined){
 				this.p1 = new Point(arg1, arg2);
 				this.p2 = new Point(arg3, arg4);
-			}else{
+			} else {
 				this.p1 = arg1;
 				this.p2 = arg2;
-			}
+			};
+			this.plist = [this.p1, this.p2];
+			this.clist = [];
 		};
 		draw(ctx, color){
 			ctx.strokeStyle = color;
@@ -57,12 +114,16 @@
 			ctx.closePath();
 			ctx.stroke();
 		};
+		addCrossPoint(p){
+			this.clist.push(p);
+		};
 		toString = function(){
 			return "[" + this.p1.toString() + " - " + this.p2.toString() + "]";
 		};
 	};
-	class Fill {
+	class Fill extends BaseShape {
 		constructor(ary){
+			super();
 			this.plist = ary;
 		};
 		draw(ctx, color){
@@ -78,194 +139,333 @@
 	};
 	class ExCanvas {
 		constructor(name, z, color){
-			this.cvs = document.getElementById(name);
-			this.cvs.style.position = "absolute";
-			this.cvs.style.top = "30";
+			this.cvs = document.getElementById("cvs" + name);
 			this.cvs.style["z-index"] = z;
-			this.obj = [];
+			this.obj   = [];
 			this.color = color;
+			this.chk   = document.getElementById("chk" + name);
 		};
 		addObject(obj){
 			this.obj.push(obj);
 		};
-		setScale = function(){
+		delObjects(ary, cb){
+			for(var i = this.obj.length - 1; i >= 0; i--){
+				for(var j = 0; j < ary.length; j++){
+					if(this.obj[i].equals(ary[j])){
+						(cb) ? cb(this.obj, i) : this.obj.splice(i, 1);
+						break;
+					};
+				};
+			};
+		};
+		setScale(){
 			this.cvs.width  = GRID_PADDING * 2 + GRID_MAX / scale;
 			this.cvs.height = GRID_PADDING * 2 + GRID_MAX / scale;
 		};
 		redraw(){
+			this.cvs.classList[(this.chk.checked ? "remove" : "add")]("hide");
 			var ctx = this.cvs.getContext("2d");
 			ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 			for(var i = 0; i < this.obj.length; i++){
 				this.obj[i].draw(ctx, this.color);
 			};
+			modeman.refreshButtons();
 		};
 	};
-
-	var cvsGrid;
-	var cvsLine;
-	var cvsFill;
-	var cvsTemp;
-	var canvas;
-	var btnMode;
-	var scale = 21;
-	var mode  = MODE_LINE;
-
-	var initialize = function(){
-		btnMode = document.getElementById("btnMode");
-		cvsFill = new ExCanvas("cvsFill", 0, "#00C0FF");
-		cvsGrid = new ExCanvas("cvsGrid", 1, "#808080");
-		cvsLine = new ExCanvas("cvsLine", 2, "#0000FF");
-		cvsTemp = new ExCanvas("cvsTemp", 3, "#FF0000");
-		canvas  = [cvsGrid, cvsLine, cvsFill, cvsTemp];
-		initGrid();
-		initLine();
-		initTemp();
-		redrawAll();
-	};
-
-	var initGrid = function(){
-		for(var i = 0; i <= GRID_NUM; i++){
-			cvsGrid.addObject(new Line(
-				i * GRID_SIZE, 0,
-				i * GRID_SIZE, GRID_MAX
-			));
-			cvsGrid.addObject(new Line(
-				0,        i * GRID_SIZE,
-				GRID_MAX, i * GRID_SIZE
-			));
-		};
-	};
-
-	var initLine = function(){
-		cvsLine.points = [];
-		cvsLine.addLines = function(ary){
+	class ExCanvasDamage extends ExCanvas {
+		addObjects(ary){
 			for(var i = 0; i < ary.length; i++){
-				for(var j = 0; j < cvsLine.obj.length; j++){
-					var p = getCrossPos(ary[i], cvsLine.obj[j]);
-					if(p){
-						cvsLine.points.push(p);
-						//console.log(p.toString());
-					};
+				if(ary[i].isInArea){
+					this.obj.push(ary[i].getFill());
 				};
 			};
-			cvsLine.obj = cvsLine.obj.concat(ary);
 		};
-		cvsLine.getNearPoint = function(x, y){
+	};
+	class ExCanvasGrid extends ExCanvas {
+		constructor(name, z, color){
+			super(name, z, color);
+			for(var i = 0; i <= GRID_NUM; i++){
+				super.addObject(new Line(
+					i * GRID_SIZE, 0,
+					i * GRID_SIZE, GRID_MAX
+				));
+				super.addObject(new Line(
+					0,        i * GRID_SIZE,
+					GRID_MAX, i * GRID_SIZE
+				));
+			};
+		};
+	};
+	class ExCanvasLine extends ExCanvas {
+		constructor(name, z, color){
+			super(name, z, color);
+			this.points = [];
+		};
+		addLines(ary){
+			for(var i = 0; i < ary.length; i++){
+				for(var j = 0; j < this.obj.length; j++){
+					var p = getCrossPos(ary[i], this.obj[j]);
+					if(p){
+						this.points.push(p);
+						ary[i].addCrossPoint(p);
+						this.obj[j].addCrossPoint(p);
+					};
+				};
+				this.obj.push(ary[i]);
+			};
+		};
+		delObjects(ary){
+			super.delObjects(ary, function(obj, i){
+				if(i == 0){ return; };
+				for(var j = 0; j < obj[i].clist.length; j++){
+					var idx = obj[i].clist[j].inAry(cvsLine.points);
+					if(idx >= 0){
+						cvsLine.points.splice(idx, 1);
+					};
+				};
+				obj.splice(i, 1);
+			});
+		};
+		getNearPoint(x, y){
 			var ret;
 			var p = new Point(x, y);
 			var minDis = GRID_MAX;
-			for(var i = 0; i < cvsLine.points.length; i++){
-				var d = cvsLine.points[i].getDistance(p);
+			for(var i = 0; i < this.points.length; i++){
+				var d = this.points[i].getDistance(p);
 				if(d < minDis){
-					ret = cvsLine.points[i];
+					ret = this.points[i];
 					minDis = d;
 				};
 			};
 			return ret;
 		};
-		cvsLine.addObject(new Line(0, 0, GRID_MAX, GRID_MAX));
+	};
+	class ExCanvasTemp extends ExCanvas {
+		constructor(name, z, color){
+			super(name, z, color);
+			this.clearObjects();
+		};
+		get isReady(){
+			return this.isComplete || (modeman.isDamageMode && this.points.length > 1);
+		};
+		clearObjects(){
+			this.isComplete = false;
+			this.points = [];
+			this.lines  = [];
+			this.obj    = [];
+		};
+		getPoints(){
+			return this.points;
+		};
+		getLines(){
+			return this.lines;
+		};
+		addLine(){
+			if(modeman.isDamageMode){ return; };
+			var len = this.points.length;
+			this.lines.push(new Line(this.points[len - 2], this.points[len - 1]));
+		};
+		redraw(){
+			this.obj = this.points.concat(this.lines);
+			super.redraw();
+		};
+		mouseMove(event){
+
+			if(this.isComplete){ return; }
+			this.points.pop();
+			this.points.push(getMousePos(event));
+
+			if(this.points.length >= 2){
+				this.lines.pop();
+				this.addLine();
+			};
+
+			this.redraw();
+
+		};
+		mouseUp(event){
+			switch(event.button){
+				case 0: this.addPoint(event);    break;
+				case 2: this.removePoint(event); break;
+			};
+		};
+		addPoint(event){
+
+			var pos = getMousePos(event);
+			var len = this.points.length;
+
+			switch(true){
+				case modeman.isLineMode:
+				case modeman.isFillMode:
+					if(this.isComplete){ return; }
+					if(len >= 2){
+						if(pos.equals(this.points[0])){
+							if(modeman.isSingleLineMode){
+								return;
+							} else {
+								this.isComplete = true;
+							};
+						} else if(len >= 3 && pos.equals(this.points[len - 2])){
+							this.lines.pop();
+							this.points.pop();
+							this.isComplete = true;
+						} else {
+							if(modeman.isSingleLineMode){
+								this.isComplete = true;
+							} else {
+								this.addLine();
+							};
+						};
+					};
+					break;
+
+				case modeman.isDamageMode:
+					if(!this.points[len - 1].isInArea){ return; };
+					for(var i = 0; i < len - 1; i++){
+						if(this.points[i].equals(pos)){
+							return;
+						};
+					};
+					break;
+
+			};
+
+			if(!this.isComplete){
+				this.points.push(pos);
+			};
+			this.redraw();
+
+		};
+		removePoint(event){
+			this.isComplete = false;
+			this.points.pop();
+			this.lines.pop();
+			modeman.refreshButtons();
+		};
+		setEvents(self){
+			this.cvs.addEventListener("mousemove", function(event){ self.mouseMove(event); }, false);
+			this.cvs.addEventListener("mouseup",   function(event){ self.mouseUp(event); },   false);
+		};
+	};
+	class ModeMan {
+		constructor(){
+			this.mode = MODE_NONE;
+			this.buttons = [];
+			this.initButtons([
+				MODE_LINE, MODE_SHAPE, MODE_FILL, 
+				MODE_DEL_L, MODE_DEL_S, MODE_DEL_F
+			]);
+			this.btnSubmit = document.getElementById("btnSubmit");
+		};
+		initButtons(ary){
+			for(var i = 0; i < ary.length; i++){
+				this.buttons[ary[i]] = document.getElementById("btnMode" + ary[i]);
+			};
+		};
+		get isLineMode(){
+			return ([1, 2].includes(this.mode % 10));
+		};
+		get isSingleLineMode(){
+			return (this.mode % 10 == 1);
+		};
+		get isFillMode(){
+			return (this.mode % 10 == 3);
+		};
+		get isDamageMode(){
+			return (this.mode % 10 == 4);
+		};
+		get shapeType(){
+			return this.mode % 10;
+		};
+		setMode(mode){
+			if(this.mode != MODE_NONE){
+				setEnable(this.buttons[this.mode], true);
+				toggleActive(this.buttons[this.mode]);
+			};
+			this.mode = mode;
+			setEnable(this.buttons[this.mode], false);
+			toggleActive(this.buttons[this.mode]);
+			cancel();
+		};
+		refreshButtons(){
+			setEnable(this.buttons[MODE_FILL],  (cvsLine.points.length >= 3));
+			setEnable(this.buttons[MODE_DEL_L], (cvsLine.obj.length > 1));
+			setEnable(this.buttons[MODE_DEL_S], (cvsLine.obj.length > 2));
+			setEnable(this.buttons[MODE_DEL_F], (cvsFill.obj.length > 0));
+			setEnable(this.btnSubmit, (cvsTemp.isReady));
+		};
 	};
 
-	var initTemp = function(){
-		cvsTemp.isComplete;
-		cvsTemp.points;
-		cvsTemp.lines;
-		cvsTemp.getPoints = function(){
-			return cvsTemp.getObjects(cvsTemp.points);
-		};
-		cvsTemp.getLines = function(){
-			return cvsTemp.getObjects(cvsTemp.lines);
-		};
-		cvsTemp.getObjects = function(ary){
-			var ret = [];
-			for(var i = 0; i < ary.length; i++){
-				ret.push(ary[i]);
-			};
-			return ret;
-		};
-		cvsTemp.clearObjects = function(){
-			cvsTemp.isComplete = false;
-			cvsTemp.points = [];
-			cvsTemp.lines  = [];
-			cvsTemp.obj    = [];
-		};
-		cvsTemp.mouseMove = function(event){
+	// 処理本体
+	var cvsDamage;
+	var cvsFill;
+	var cvsGrid;
+	var cvsLine;
+	var cvsTemp;
+	var cvsAry;
+	var modeman;
+	var btnScaleUp;
+	var btnScaleDown;
+	var divHelp;
+	var scale = SCALE_MAX;
 
-			if(cvsTemp.isComplete){ return; }
-			var len = cvsTemp.points.length;
+	var initialize = function(){
+		modeman = new ModeMan();
+		getElements();
+		initCanvas()
+		setScale(0);
+		modeman.setMode(MODE_LINE);
+		redrawAll();
+	};
 
-			if(len > 0){
-				cvsTemp.points.pop();
-			};
-			cvsTemp.points.push(getMousePos(event));
+	var getElements = function(){
+		btnScaleUp   = document.getElementById("btnScaleUp");
+		btnScaleDown = document.getElementById("btnScaleDown");
+		divHelp      = document.getElementById("divHelp");
+	};
 
-			if(len >= 2){
-				cvsTemp.lines.pop();
-				cvsTemp.addLine();
-			};
-
-			cvsTemp.obj = cvsTemp.points.concat(cvsTemp.lines);
-			cvsTemp.redraw();
-
-		};
-		cvsTemp.mouseUp = function(event){
-
-			if(cvsTemp.isComplete){ return; }
-			var pos = getMousePos(event);
-			var len = cvsTemp.points.length;
-
-			if(len == 1){
-				cvsTemp.points.push(pos);
-			}else{
-				if(pos.equals(cvsTemp.points[0])){
-					switch(mode){
-						case MODE_LINE: return;
-						case MODE_FILL: cvsTemp.isComplete = true; break;
-					};
-				};
-				cvsTemp.points.push(pos);
-				cvsTemp.addLine();
-				if(mode == MODE_LINE){
-					cvsTemp.isComplete = true;
-				};
-			};
-
-		};
-		cvsTemp.addLine = function(){
-			var len = cvsTemp.points.length;
-			cvsTemp.lines.push(new Line(cvsTemp.points[len - 2], cvsTemp.points[len - 1]));
-		};
-		cvsTemp.cvs.addEventListener("mousemove", cvsTemp.mouseMove, false);
-		cvsTemp.cvs.addEventListener("mouseup",   cvsTemp.mouseUp,   false);
-		cvsTemp.clearObjects();
+	var initCanvas = function(){
+		cvsFill   = new ExCanvas("Fill", 1, "#00C0FF");
+		cvsGrid   = new ExCanvasGrid("Grid", 2, "#808080");
+		cvsLine   = new ExCanvasLine("Line", 3, "#0000FF");
+		cvsTemp   = new ExCanvasTemp("Temp", 4, "#FF0000");
+		cvsAry    = [cvsFill, cvsGrid, cvsLine, cvsTemp];
+		cvsTemp.setEvents(cvsTemp);
+		cvsLine.addObject(new Line(0, 0, GRID_MAX, GRID_MAX));
 	};
 
 	var getMousePos = function(event){
 
+		var ret;
 		var posX = 0;
 		var posY = 0;
-		var ret;
 		var rect = event.target.getBoundingClientRect();
 
 		posX = (event.clientX - rect.left - GRID_PADDING) * scale;
 		posY = (event.clientY - rect.top  - GRID_PADDING) * scale;
 
-		switch(mode){
-			case MODE_LINE:
+		switch(true){
+			case modeman.isLineMode:
 				ret = new Point(
 					Math.round(posX / GRID_SIZE) * GRID_SIZE,
 					Math.round(posY / GRID_SIZE) * GRID_SIZE
 				);
 				break;
-			case MODE_FILL:
+			case modeman.isFillMode:
 				ret = cvsLine.getNearPoint(posX, posY);
+				break;
+			case modeman.isDamageMode:
+				ret = new SqrPoint(
+					Math.floor(posX / GRID_SIZE) * GRID_SIZE,
+					Math.floor(posY / GRID_SIZE) * GRID_SIZE
+				);
 				break;
 		};
 
 		return ret;
 	};
 
-	var getCrossPos = function (line1, line2) {
+	var getCrossPos = function(line1, line2){
 
 		var x0 = line1.p1.X;
 		var y0 = line1.p1.Y;
@@ -301,63 +501,178 @@
 		cvsLine.addLines(cvsTemp.getLines());
 		cvsLine.redraw();
 	};
+	var delLine = function(){
+		cvsLine.delObjects(cvsTemp.getLines());
+		if(cvsLine.obj.length == 1){
+			modeman.setMode(MODE_LINE);
+		};
+		cvsLine.redraw();
+	};
 	var setFill = function(){
 		cvsFill.addObject(new Fill(cvsTemp.getPoints()));
 		cvsFill.redraw();
 	};
+	var delFill = function(){
+		cvsFill.delObjects([new Fill(cvsTemp.getPoints())]);
+		if(cvsFill.obj.length == 0){
+			modeman.setMode(MODE_LINE);
+		};
+		cvsFill.redraw();
+	};
+	var setDamage = function(){
+		cvsDamage.addObjects(cvsTemp.getPoints());
+		cvsDamage.redraw();
+	};
 	var redrawAll = function(){
-		for(var i = 0; i < canvas.length; i++){
-			canvas[i].setScale();
-			canvas[i].redraw();
+		for(var i = 0; i < cvsAry.length; i++){
+			cvsAry[i].setScale();
+			cvsAry[i].redraw();
 		};
 	};
 
-	var chmod = function(){
-		switch(mode){
-			case MODE_LINE: mode = MODE_FILL; btnMode.value = "塗"; break;
-			case MODE_FILL: mode = MODE_LINE; btnMode.value = "線"; break;
-		};
-		calcel();
-	};
 	var submit = function(){
-		switch(mode){
-			case MODE_LINE: setLine(); break;
-			case MODE_FILL: setFill(); break;
+		switch(true){
+			case modeman.mode == MODE_DEL_L:
+			case modeman.mode == MODE_DEL_S: delLine(); break;
+			case modeman.mode == MODE_DEL_F: delFill(); break;
+			case modeman.isLineMode:   setLine();   break;
+			case modeman.isFillMode:   setFill();   break;
+			case modeman.isDamageMode: setDamage(); break;
 		};
-		calcel();
+		cancel();
 	};
-	var calcel = function(){
+	var cancel = function(){
 		cvsTemp.clearObjects();
 		cvsTemp.redraw();
 	};
-	var scaleUp = function(){
-		setScale(-1);
-	};
-	var scaleDown = function(){
-		setScale(1);
-	};
 	var setScale = function(dir){
-		diff = dir * 6;
-		if(scale + diff >= 3){
-			scale += diff;
-			redrawAll();
-		};
+		scale += dir * 6;
+		setEnable(btnScaleUp,   (scale > SCALE_MIN));
+		setEnable(btnScaleDown, (scale < SCALE_MAX));
+		redrawAll();
 	};
+	var showHelp = function(event){
+		if(!(document.onclick)){
+			divHelp.classList.remove("hide");
+			document.onclick = hideHelp;
+			cancelEvent(event);
+		} else {
+			hideHelp();
+		}
+	};
+	var hideHelp = function(){
+		divHelp.classList.add("hide");
+		document.onclick = null;
+	};
+
+	var setEnable = function(obj, flg){
+		obj.disabled = flg ? null : "disabled";
+	};
+	var toggleActive = function(obj){
+		obj.classList.toggle("active");
+	};
+	var cancelEvent = function(event){
+		event.stopPropagation();
+	};
+
+	var log = function(txt){ console.log(txt); };
 
 </script>
+<style>
+	td {
+		padding   : 0px 20px;
+		text-align: center;
+	}
+	input {
+		border-width : 1px;
+		border-radius: 3px;
+		font-family  : "MS ゴシック";
+		margin       : 2px 0px;
+	}
+	canvas {
+		position: absolute;
+	}
+	.menu {
+		position  : fixed;
+		z-index   : 5;
+		background: #FFFFFF;
+	}
+	.content {
+		position: absolute;
+		top     : 60px;
+	}
+	.help {
+		position  : fixed;
+		top       : 55;
+		left      : 200;
+		z-index   : 6;
+		padding   : 6px 12px;
+		background: #E0E0E0;
+		border    : 1px solid #000000;
+		border-radius: 3px;
+	}
+	.label {
+		vertical-align: middle;
+	}
+	.active {
+		color     : #000000;
+		background: #00A0FF;
+	}
+	.hide {
+		display: none;
+	}
+</style>
 </head>
 
-<body onload="initialize()">
-	<canvas id="cvsGrid"></canvas>
-	<canvas id="cvsLine"></canvas>
-	<canvas id="cvsFill"></canvas>
-	<canvas id="cvsTemp"></canvas>
-	<div id="menu" style="position:fixed; z-index:5;">
-		<input id="btnScaleUp"   type="button" value="＋"         onclick="scaleUp()" />
-		<input id="btnScaleDown" type="button" value="－"         onclick="scaleDown()" />
-		<input id="btnMode"      type="button" value="線"         onclick="chmod()" />
-		<input id="btnSubmit"    type="button" value="決定"       onclick="submit()" />
-		<input id="btnCancel"    type="button" value="キャンセル" onclick="calcel()" />
+<body oncontextmenu="return false;" onload="initialize()">
+	<table class="menu">
+		<tr>
+			<td>
+				<input id="btnScaleUp"   type="button" value="＋" onclick="setScale(-1)" title="拡大" />
+				<input id="btnScaleDown" type="button" value="－" onclick="setScale( 1)" title="縮小" />
+			</td>
+			<td>
+				表示切替<br>
+				<input id="chkGrid"   type="checkbox" checked="true" onclick="redrawAll()">マス</input>
+				<input id="chkLine"   type="checkbox" checked="true" onclick="redrawAll()">線</input>
+				<input id="chkFill"   type="checkbox" checked="true" onclick="redrawAll()">塗</input>
+				<input id="chkTemp"   type="checkbox" checked="true" onclick="redrawAll()" class="hide"></input>
+			</td>
+			<td>
+				<span class="label">描画 :</span>
+				<input id="btnMode11" type="button" value="／" onclick="modeman.setMode(11)" title="直線" />
+				<input id="btnMode12" type="button" value="☆" onclick="modeman.setMode(12)" title="多角形" />
+				<input id="btnMode13" type="button" value="★" onclick="modeman.setMode(13)" title="塗潰し" />
+				<br>
+				<span class="label">削除 :</span>
+				<input id="btnMode21" type="button" value="／" onclick="modeman.setMode(21)" title="直線削除" />
+				<input id="btnMode22" type="button" value="☆" onclick="modeman.setMode(22)" title="多角形削除" />
+				<input id="btnMode23" type="button" value="★" onclick="modeman.setMode(23)" title="塗り削除" />
+			</td>
+			<td>
+				<input id="btnSubmit" type="button" value="決定"       onclick="submit()" />
+				<input id="btnCancel" type="button" value="キャンセル" onclick="cancel()" />
+			</td>
+			<td>
+				<input id="btnHelp" type="button" value="？" onclick="showHelp(event)" title="ヘルプ" />
+			</td>
+		</tr>
+	</table>
+	<div id = "divHelp" class="help hide" onclick="cancelEvent(event)">
+		■操作方法■<br>
+		①モードを選ぶ。<br>
+		②左クリックで対象を指定する。<br>
+		　直線　　：2点を指定する。<br>
+		　多角形　：始点に戻るか、末尾の点を再度選択するまで連続で指定する。<br>
+		③間違えた場合は右クリックで一手戻る。<br>
+		④決定ボタンを押す。
+	</div>
+	<div class="content">
+		<canvas id="cvsDamage"></canvas>
+		<canvas id="cvsFill"></canvas>
+		<canvas id="cvsGrid"></canvas>
+		<canvas id="cvsLine"></canvas>
+		<canvas id="cvsTemp"></canvas>
 	</div>
 </body>
 
