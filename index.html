@@ -6,12 +6,13 @@
 <script language="JavaScript">
 
 	// 定数定義
-	const GRID_SIZE    = 1400;
+	const GRID_SIZE    = 1200;
 	const GRID_NUM     = 11;
 	const GRID_MAX     = GRID_SIZE * GRID_NUM;
 	const GRID_PADDING = 20;
-	const SCALE_MAX    = 21;
-	const SCALE_MIN    = 3;
+	const SCALE_MAX    = 19;
+	const SCALE_MIN    = 4;
+	const SCALE_PITCH  = 5;
 	const POINT_SIZE   = 5;
 	const MODE_NONE    = 0;
 	const MODE_LINE    = 11;
@@ -55,8 +56,12 @@
 		getDistance(p){
 			return Math.sqrt(Math.abs(this.X - p.X) ** 2 + Math.abs(this.Y - p.Y) ** 2);
 		};
-		toString = function(){
-			return "(" + this.X + ", " + this.Y + ")";
+		serialize(){
+			return "P:" + this.X + "_" + this.Y;
+		};
+		static deserialize(str){
+			var ary = str.slice(2).split("_");
+			return new Point(Number(ary[0]), Number(ary[1]));
 		};
 	};
 	class SqrPoint extends Point {
@@ -91,6 +96,21 @@
 			};
 			return (cnt == this.plist.length);
 		};
+		serialize(tag){
+			var ret = [];
+			for(var i = 0; i < this.plist.length; i++){
+				ret.push(this.plist[i].serialize());
+			};
+			return tag + ret.join("-");
+		};
+		static deserialize(str){
+			var ret = [];
+			var ary = str.slice(2).split("-");
+			for(var i = 0; i < ary.length; i++){
+				ret.push(Point.deserialize(ary[i]));
+			};
+			return ret;
+		};
 	};
 	class Line extends BaseShape {
 		constructor(arg1, arg2, arg3, arg4){
@@ -117,8 +137,15 @@
 		addCrossPoint(p){
 			this.clist.push(p);
 		};
-		toString = function(){
+		toString(){
 			return "[" + this.p1.toString() + " - " + this.p2.toString() + "]";
+		};
+		serialize(){
+			return super.serialize("L:");
+		};
+		static deserialize(str){
+			var ary = BaseShape.deserialize(str);
+			return new Line(ary[0], ary[1]);
 		};
 	};
 	class Fill extends BaseShape {
@@ -136,14 +163,24 @@
 			ctx.closePath();
 			ctx.fill();
 		};
+		serialize(){
+			return super.serialize("F:");
+		};
+		static deserialize(str){
+			var ary = BaseShape.deserialize(str);
+			return new Fill(ary);
+		};
 	};
 	class ExCanvas {
 		constructor(name, z, color){
 			this.cvs = document.getElementById("cvs" + name);
 			this.cvs.style["z-index"] = z;
-			this.obj   = [];
 			this.color = color;
 			this.chk   = document.getElementById("chk" + name);
+			this.initialize();
+		};
+		initialize(){
+			this.obj = [];
 		};
 		addObject(obj){
 			this.obj.push(obj);
@@ -171,6 +208,30 @@
 			};
 			modeman.refreshButtons();
 		};
+		serialize(tag){
+			var ret = [];
+			for(var i = 0; i < this.obj.length; i++){
+				ret.push(this.obj[i].serialize());
+			};
+			return tag + ret.join("~");
+		};
+		static deserialize(str){
+			var ret = [];
+			var ary = str.slice(3).split("~");
+			for(var i = 0; i < ary.length; i++){
+				var obj;
+				switch(ary[i].substring(0, 2)){
+					case "P:": obj = Point.deserialize(ary[i]); break;
+					case "L:": obj = Line.deserialize(ary[i]);  break;
+					case "F:": obj = Fill.deserialize(ary[i]);  break;
+				};
+				(obj) ? ret.push(obj) : "";
+			};
+			return ret;
+		};
+		loadData(str){
+			this.obj = ExCanvas.deserialize(str);
+		};
 	};
 	class ExCanvasDamage extends ExCanvas {
 		addObjects(ary){
@@ -180,10 +241,25 @@
 				};
 			};
 		};
+		delObjects(ary){
+			var aryFill = [];
+			for(var i = 0; i < ary.length; i++){
+				aryFill.push(ary[i].getFill());
+			};
+			super.delObjects(aryFill);
+		};
+		serialize(){
+			return super.serialize("CD:");
+		};
+	};
+	class ExCanvasFill extends ExCanvas {
+		serialize(){
+			return super.serialize("CF:");
+		};
 	};
 	class ExCanvasGrid extends ExCanvas {
-		constructor(name, z, color){
-			super(name, z, color);
+		initialize(){
+			super.initialize();
 			for(var i = 0; i <= GRID_NUM; i++){
 				super.addObject(new Line(
 					i * GRID_SIZE, 0,
@@ -197,9 +273,10 @@
 		};
 	};
 	class ExCanvasLine extends ExCanvas {
-		constructor(name, z, color){
-			super(name, z, color);
+		initialize(){
+			super.initialize();
 			this.points = [];
+			this.addObject(new Line(0, 0, GRID_MAX, GRID_MAX));
 		};
 		addLines(ary){
 			for(var i = 0; i < ary.length; i++){
@@ -239,20 +316,22 @@
 			};
 			return ret;
 		};
+		serialize(){
+			return super.serialize("CL:");
+		};
+		loadData(str){
+			this.addLines(ExCanvas.deserialize(str).slice(1));
+		};
 	};
 	class ExCanvasTemp extends ExCanvas {
-		constructor(name, z, color){
-			super(name, z, color);
-			this.clearObjects();
-		};
-		get isReady(){
-			return this.isComplete || (modeman.isDamageMode && this.points.length > 1);
-		};
-		clearObjects(){
+		initialize(){
+			super.initialize();
 			this.isComplete = false;
 			this.points = [];
 			this.lines  = [];
-			this.obj    = [];
+		};
+		get isReady(){
+			return this.isComplete || (modeman.isDamageMode && this.points.length > 1);
 		};
 		getPoints(){
 			return this.points;
@@ -282,6 +361,14 @@
 
 			this.redraw();
 
+		};
+		mouseOut(event){
+			if(this.isComplete){ return; }
+			if(modeman.isDamageMode){
+				this.points.pop();
+				this.points.push(new SqrPoint(-GRID_SIZE, -GRID_SIZE));
+				this.redraw();
+			};
 		};
 		mouseUp(event){
 			switch(event.button){
@@ -337,13 +424,17 @@
 
 		};
 		removePoint(event){
-			this.isComplete = false;
-			this.points.pop();
-			this.lines.pop();
+			if(this.isComplete){
+				this.isComplete = false;
+			} else {
+				this.points.pop();
+				this.lines.pop();
+			}
 			modeman.refreshButtons();
 		};
 		setEvents(self){
 			this.cvs.addEventListener("mousemove", function(event){ self.mouseMove(event); }, false);
+			this.cvs.addEventListener("mouseout",  function(event){ self.mouseOut(event); },  false);
 			this.cvs.addEventListener("mouseup",   function(event){ self.mouseUp(event); },   false);
 		};
 	};
@@ -352,8 +443,8 @@
 			this.mode = MODE_NONE;
 			this.buttons = [];
 			this.initButtons([
-				MODE_LINE, MODE_SHAPE, MODE_FILL, 
-				MODE_DEL_L, MODE_DEL_S, MODE_DEL_F
+				MODE_LINE, MODE_SHAPE, MODE_FILL, MODE_DAMAGE,
+				MODE_DEL_L, MODE_DEL_S, MODE_DEL_F, MODE_DEL_D
 			]);
 			this.btnSubmit = document.getElementById("btnSubmit");
 		};
@@ -374,16 +465,11 @@
 		get isDamageMode(){
 			return (this.mode % 10 == 4);
 		};
-		get shapeType(){
-			return this.mode % 10;
-		};
 		setMode(mode){
 			if(this.mode != MODE_NONE){
-				setEnable(this.buttons[this.mode], true);
 				toggleActive(this.buttons[this.mode]);
 			};
 			this.mode = mode;
-			setEnable(this.buttons[this.mode], false);
 			toggleActive(this.buttons[this.mode]);
 			cancel();
 		};
@@ -392,6 +478,7 @@
 			setEnable(this.buttons[MODE_DEL_L], (cvsLine.obj.length > 1));
 			setEnable(this.buttons[MODE_DEL_S], (cvsLine.obj.length > 2));
 			setEnable(this.buttons[MODE_DEL_F], (cvsFill.obj.length > 0));
+			setEnable(this.buttons[MODE_DEL_D], (cvsDamage.obj.length > 0));
 			setEnable(this.btnSubmit, (cvsTemp.isReady));
 		};
 	};
@@ -414,6 +501,7 @@
 		getElements();
 		initCanvas()
 		setScale(0);
+		loadData(localStorage.getItem("data"));
 		modeman.setMode(MODE_LINE);
 		redrawAll();
 	};
@@ -425,13 +513,13 @@
 	};
 
 	var initCanvas = function(){
-		cvsFill   = new ExCanvas("Fill", 1, "#00C0FF");
+		cvsDamage = new ExCanvasDamage("Damage", 0, "#FFA0A0");
+		cvsFill   = new ExCanvasFill("Fill", 1, "#00C0FF");
 		cvsGrid   = new ExCanvasGrid("Grid", 2, "#808080");
 		cvsLine   = new ExCanvasLine("Line", 3, "#0000FF");
 		cvsTemp   = new ExCanvasTemp("Temp", 4, "#FF0000");
-		cvsAry    = [cvsFill, cvsGrid, cvsLine, cvsTemp];
+		cvsAry    = [cvsDamage, cvsFill, cvsGrid, cvsLine, cvsTemp];
 		cvsTemp.setEvents(cvsTemp);
-		cvsLine.addObject(new Line(0, 0, GRID_MAX, GRID_MAX));
 	};
 
 	var getMousePos = function(event){
@@ -523,30 +611,77 @@
 		cvsDamage.addObjects(cvsTemp.getPoints());
 		cvsDamage.redraw();
 	};
+	var delDamage = function(){
+		cvsDamage.delObjects(cvsTemp.getPoints());
+		if(cvsDamage.obj.length == 0){
+			modeman.setMode(MODE_LINE);
+		};
+		cvsDamage.redraw();
+	};
 	var redrawAll = function(){
 		for(var i = 0; i < cvsAry.length; i++){
 			cvsAry[i].setScale();
 			cvsAry[i].redraw();
 		};
 	};
+	var serialize = function(){
+		var ret = "GS:" + GRID_SIZE + "|";
+		ret += cvsDamage.serialize() + "|";
+		ret += cvsFill.serialize() + "|";
+		ret += cvsLine.serialize();
+		return ret;
+	};
+	var loadData = function(str){
+		if(!(str)){ return; };
+		try{
+			var ary = str.split("|");
+			for(var i = 0; i < ary.length; i++){
+				switch(ary[i].substring(0, 3)){
+					case "GS:": break;	//★
+					case "CD:": cvsDamage.loadData(ary[i]); break;
+					case "CF:": cvsFill.loadData(ary[i]);   break;
+					case "CL:": cvsLine.loadData(ary[i]);   break;
+				};
+			};
+			redrawAll();
+			modeman.refreshButtons();
+		} catch(e) {
+			alert("データの読み込みに失敗しました。");
+			localStorage.setItem("data", null);
+			clearAll();
+		};
+	};
 
 	var submit = function(){
 		switch(true){
 			case modeman.mode == MODE_DEL_L:
-			case modeman.mode == MODE_DEL_S: delLine(); break;
-			case modeman.mode == MODE_DEL_F: delFill(); break;
+			case modeman.mode == MODE_DEL_S: delLine();   break;
+			case modeman.mode == MODE_DEL_F: delFill();   break;
+			case modeman.mode == MODE_DEL_D: delDamage(); break;
 			case modeman.isLineMode:   setLine();   break;
 			case modeman.isFillMode:   setFill();   break;
 			case modeman.isDamageMode: setDamage(); break;
 		};
+		localStorage.setItem("data", serialize());
 		cancel();
 	};
 	var cancel = function(){
-		cvsTemp.clearObjects();
+		cvsTemp.initialize();
 		cvsTemp.redraw();
 	};
+	var clearAll = function(flgDialog){
+		var ret = flgDialog ? confirm("キャンバスを初期化します。\nよろしいですか？") : true;
+		if(ret){
+			for(var i = 0; i < cvsAry.length; i++){
+				cvsAry[i].initialize();
+			};
+			modeman.setMode(MODE_LINE);
+			localStorage.setItem("data", null);
+			redrawAll();
+		};
+	};
 	var setScale = function(dir){
-		scale += dir * 6;
+		scale += dir * SCALE_PITCH;
 		setEnable(btnScaleUp,   (scale > SCALE_MIN));
 		setEnable(btnScaleDown, (scale < SCALE_MAX));
 		redrawAll();
@@ -599,11 +734,11 @@
 	}
 	.content {
 		position: absolute;
-		top     : 60px;
+		top     : 70px;
 	}
 	.help {
 		position  : fixed;
-		top       : 55;
+		top       : 65;
 		left      : 200;
 		z-index   : 6;
 		padding   : 6px 12px;
@@ -636,6 +771,8 @@
 				<input id="chkGrid"   type="checkbox" checked="true" onclick="redrawAll()">マス</input>
 				<input id="chkLine"   type="checkbox" checked="true" onclick="redrawAll()">線</input>
 				<input id="chkFill"   type="checkbox" checked="true" onclick="redrawAll()">塗</input>
+				<br>
+				<input id="chkDamage" type="checkbox" checked="true" onclick="redrawAll()">ダメージ</input>
 				<input id="chkTemp"   type="checkbox" checked="true" onclick="redrawAll()" class="hide"></input>
 			</td>
 			<td>
@@ -643,15 +780,18 @@
 				<input id="btnMode11" type="button" value="／" onclick="modeman.setMode(11)" title="直線" />
 				<input id="btnMode12" type="button" value="☆" onclick="modeman.setMode(12)" title="多角形" />
 				<input id="btnMode13" type="button" value="★" onclick="modeman.setMode(13)" title="塗潰し" />
+				<input id="btnMode14" type="button" value="■" onclick="modeman.setMode(14)" title="ダメージ塗り" />
 				<br>
 				<span class="label">削除 :</span>
 				<input id="btnMode21" type="button" value="／" onclick="modeman.setMode(21)" title="直線削除" />
 				<input id="btnMode22" type="button" value="☆" onclick="modeman.setMode(22)" title="多角形削除" />
 				<input id="btnMode23" type="button" value="★" onclick="modeman.setMode(23)" title="塗り削除" />
+				<input id="btnMode24" type="button" value="■" onclick="modeman.setMode(24)" title="ダメージ削除" />
 			</td>
 			<td>
 				<input id="btnSubmit" type="button" value="決定"       onclick="submit()" />
 				<input id="btnCancel" type="button" value="キャンセル" onclick="cancel()" />
+				<input id="btnCancel" type="button" value="初期化"     onclick="clearAll(true)" />
 			</td>
 			<td>
 				<input id="btnHelp" type="button" value="？" onclick="showHelp(event)" title="ヘルプ" />
@@ -664,6 +804,7 @@
 		②左クリックで対象を指定する。<br>
 		　直線　　：2点を指定する。<br>
 		　多角形　：始点に戻るか、末尾の点を再度選択するまで連続で指定する。<br>
+		　ダメージ：マス単位で指定する。<br>
 		③間違えた場合は右クリックで一手戻る。<br>
 		④決定ボタンを押す。
 	</div>
