@@ -29,6 +29,7 @@
 		constructor(x, y){
 			this.X = x;
 			this.Y = y;
+			this.hidden = false;
 		};
 		get drawX(){ return Math.round(this.X / scale) + GRID_PADDING; };
 		get drawY(){ return Math.round(this.Y / scale) + GRID_PADDING; };
@@ -65,6 +66,13 @@
 		};
 	};
 	class SqrPoint extends Point {
+		constructor(x, y){
+			super(x, y);
+			this.p00 = new Point(this.X, this.Y);
+			this.p01 = new Point(this.X, this.Y + GRID_SIZE);
+			this.p10 = new Point(this.X + GRID_SIZE, this.Y);
+			this.p11 = new Point(this.X + GRID_SIZE, this.Y + GRID_SIZE);
+		};
 		draw(ctx, color){
 			if(this.isInArea){
 				ctx.fillStyle = color;
@@ -75,17 +83,21 @@
 			return (0 <= this.X && this.X < GRID_MAX && 0 <= this.Y && this.Y < GRID_MAX);
 		};
 		getFill(){
-			return new Fill([
-				new Point(this.X, this.Y),
-				new Point(this.X + GRID_SIZE, this.Y),
-				new Point(this.X + GRID_SIZE, this.Y + GRID_SIZE),
-				new Point(this.X, this.Y + GRID_SIZE)
-			]);
+			return new Fill([this.p00, this.p10, this.p11, this.p01]);
 		};
+		getLines(){
+			return [
+				new Line(this.p00, this.p10, true),
+				new Line(this.p10, this.p11, true),
+				new Line(this.p11, this.p01, true),
+				new Line(this.p01, this.p00, true)
+			];
+		}
 	};
 	class BaseShape {
 		constructor(){
-			this.plist = [];
+			this.plist  = [];
+			this.hidden = false;
 		};
 		equals(obj){
 			var cnt = 0;
@@ -101,13 +113,14 @@
 			for(var i = 0; i < this.plist.length; i++){
 				ret.push(this.plist[i].serialize());
 			};
+			this.hidden ? ret.push("h") : "";
 			return tag + ret.join("-");
 		};
-		static deserialize(str){
+		static parsePoints(str){
 			var ret = [];
 			var ary = str.slice(2).split("-");
 			for(var i = 0; i < ary.length; i++){
-				ret.push(Point.deserialize(ary[i]));
+				ret.push(ary[i] == "h" ? "h" : Point.deserialize(ary[i]));
 			};
 			return ret;
 		};
@@ -122,8 +135,9 @@
 				this.p1 = arg1;
 				this.p2 = arg2;
 			};
-			this.plist = [this.p1, this.p2];
-			this.clist = [];
+			this.plist  = [this.p1, this.p2];
+			this.clist  = [];
+			this.hidden = (arg3 === true);
 		};
 		draw(ctx, color){
 			ctx.strokeStyle = color;
@@ -137,15 +151,14 @@
 		addCrossPoint(p){
 			this.clist.push(p);
 		};
-		toString(){
-			return "[" + this.p1.toString() + " - " + this.p2.toString() + "]";
-		};
 		serialize(){
 			return super.serialize("L:");
 		};
 		static deserialize(str){
-			var ary = BaseShape.deserialize(str);
-			return new Line(ary[0], ary[1]);
+			var ary = BaseShape.parsePoints(str);
+			var ret = new Line(ary[0], ary[1]);
+			ret.hidden = (ary.length == 3);
+			return ret;
 		};
 	};
 	class Fill extends BaseShape {
@@ -167,7 +180,7 @@
 			return super.serialize("F:");
 		};
 		static deserialize(str){
-			var ary = BaseShape.deserialize(str);
+			var ary = BaseShape.parsePoints(str);
 			return new Fill(ary);
 		};
 	};
@@ -184,6 +197,9 @@
 		};
 		addObject(obj){
 			this.obj.push(obj);
+		};
+		addObjects(ary){
+			this.obj = this.obj.concat(ary);
 		};
 		delObjects(ary, cb){
 			for(var i = this.obj.length - 1; i >= 0; i--){
@@ -204,7 +220,7 @@
 			var ctx = this.cvs.getContext("2d");
 			ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 			for(var i = 0; i < this.obj.length; i++){
-				this.obj[i].draw(ctx, this.color);
+				!(this.obj[i].hidden) ? this.obj[i].draw(ctx, this.color) : "";
 			};
 			modeman.refreshButtons();
 		};
@@ -215,7 +231,7 @@
 			};
 			return tag + ret.join("~");
 		};
-		static deserialize(str){
+		static parseObjects(str){
 			var ret = [];
 			var ary = str.slice(3).split("~");
 			for(var i = 0; i < ary.length; i++){
@@ -230,24 +246,10 @@
 			return ret;
 		};
 		loadData(str){
-			this.obj = ExCanvas.deserialize(str);
+			this.obj = ExCanvas.parseObjects(str);
 		};
 	};
 	class ExCanvasDamage extends ExCanvas {
-		addObjects(ary){
-			for(var i = 0; i < ary.length; i++){
-				if(ary[i].isInArea){
-					this.obj.push(ary[i].getFill());
-				};
-			};
-		};
-		delObjects(ary){
-			var aryFill = [];
-			for(var i = 0; i < ary.length; i++){
-				aryFill.push(ary[i].getFill());
-			};
-			super.delObjects(aryFill);
-		};
 		serialize(){
 			return super.serialize("CD:");
 		};
@@ -320,7 +322,7 @@
 			return super.serialize("CL:");
 		};
 		loadData(str){
-			this.addLines(ExCanvas.deserialize(str).slice(1));
+			this.addLines(ExCanvas.parseObjects(str).slice(1));
 		};
 	};
 	class ExCanvasTemp extends ExCanvas {
@@ -608,15 +610,32 @@
 		cvsFill.redraw();
 	};
 	var setDamage = function(){
-		cvsDamage.addObjects(cvsTemp.getPoints());
-		cvsDamage.redraw();
+		editDamage("add");
 	};
 	var delDamage = function(){
-		cvsDamage.delObjects(cvsTemp.getPoints());
+		editDamage("del");
+	};
+	var editDamage = function(mode){
+
+		var points = cvsTemp.getPoints();
+		var fills  = [];
+		var lines  = [];
+		for(var i = 0; i < points.length; i++){
+			if(points[i].isInArea){
+				fills.push(points[i].getFill());
+				lines = lines.concat(points[i].getLines());
+			};
+		};
+
+		cvsDamage[(mode == "add" ? "addObjects" : "delObjects")](fills);
+		cvsLine[  (mode == "add" ? "addLines"   : "delObjects")](lines);
+
 		if(cvsDamage.obj.length == 0){
 			modeman.setMode(MODE_LINE);
 		};
 		cvsDamage.redraw();
+		cvsLine.redraw();
+
 	};
 	var redrawAll = function(){
 		for(var i = 0; i < cvsAry.length; i++){
