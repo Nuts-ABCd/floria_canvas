@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -7,13 +8,15 @@
 
 	// 定数定義
 	const GRID_SIZE    = 1200;
-	const GRID_NUM     = 11;
-	const GRID_MAX     = GRID_SIZE * GRID_NUM;
 	const GRID_PADDING = 20;
 	const SCALE_MAX    = 19;
 	const SCALE_MIN    = 4;
 	const SCALE_PITCH  = 5;
 	const POINT_SIZE   = 5;
+	const TAB_NONE     = 0;
+	const TAB_MAIN     = 1;
+	const TAB_ALL      = 2;
+	const TAB_SUB      = 3;
 	const MODE_NONE    = 0;
 	const MODE_LINE    = 11;
 	const MODE_SHAPE   = 12;
@@ -23,6 +26,18 @@
 	const MODE_DEL_S   = 22;
 	const MODE_DEL_F   = 23;
 	const MODE_DEL_D   = 24;
+
+	// サンプルデータ
+	var sampleData = [
+		"",
+		"",
+		"GS:1200|GN:11|CD:F:P:8400_4800-P:9600_4800-P:9600_6000-P:8400_6000~F:P:9600_4800-P:10800_4800-P:10800_6000-P:9600_6000~F:P:9600_3600-P:10800_3600-P:10800_4800-P:9600_4800~F:P:9600_6000-P:10800_6000-P:10800_7200-P:9600_7200~F:P:10800_4800-P:12000_4800-P:12000_6000-P:10800_6000|CF:|CL:L:P:0_0-P:13200_13200~L:P:0_0-P:1200_13200~L:P:1200_13200-P:2400_12000~L:P:2400_12000-P:0_0~L:P:0_12000-P:12000_12000~L:P:12000_12000-P:10800_13200~L:P:10800_13200-P:0_12000~L:P:0_1200-P:1200_1200~L:P:1200_1200-P:13200_2400~L:P:13200_2400-P:0_1200~L:P:8400_4800-P:9600_4800-h~L:P:9600_4800-P:9600_6000-h~L:P:9600_6000-P:8400_6000-h~L:P:8400_6000-P:8400_4800-h~L:P:9600_4800-P:10800_4800-h~L:P:10800_4800-P:10800_6000-h~L:P:10800_6000-P:9600_6000-h~L:P:9600_6000-P:9600_4800-h~L:P:9600_3600-P:10800_3600-h~L:P:10800_3600-P:10800_4800-h~L:P:10800_4800-P:9600_4800-h~L:P:9600_4800-P:9600_3600-h~L:P:9600_6000-P:10800_6000-h~L:P:10800_6000-P:10800_7200-h~L:P:10800_7200-P:9600_7200-h~L:P:9600_7200-P:9600_6000-h~L:P:10800_4800-P:12000_4800-h~L:P:12000_4800-P:12000_6000-h~L:P:12000_6000-P:10800_6000-h~L:P:10800_6000-P:10800_4800-h~L:P:12000_0-P:13200_13200",
+		"GS:1200|GN:11|CD:|CF:F:P:3300_2400-P:3600_1200-P:3900_2400-P:6000_2400-P:4320_4080-P:4800_6000-P:3600_4800-P:2400_6000-P:2880_4080-P:1200_2400-P:3300_2400~F:P:10800_8160-P:12000_7200-P:12372_8317-P:10800_8160~F:P:2898_9746-P:2260_8791-P:0_10800-P:2898_9746|CL:L:P:0_0-P:13200_13200~L:P:1200_2400-P:6000_2400~L:P:6000_2400-P:2400_6000~L:P:2400_6000-P:3600_1200~L:P:3600_1200-P:4800_6000~L:P:4800_6000-P:1200_2400~L:P:6000_12000-P:12000_7200~L:P:12000_7200-P:13200_10800~L:P:13200_10800-P:9600_13200~L:P:9600_13200-P:6000_12000~L:P:3600_10800-P:13200_8400~L:P:13200_8400-P:1200_7200~L:P:1200_7200-P:3600_10800~L:P:10800_1200-P:0_10800~L:P:0_10800-P:13200_6000~L:P:13200_6000-P:10800_1200",
+		"GS:1200|GN:11|CD:F:P:4800_4800-P:6000_4800-P:6000_6000-P:4800_6000~F:P:6000_4800-P:7200_4800-P:7200_6000-P:6000_6000~F:P:7200_4800-P:8400_4800-P:8400_6000-P:7200_6000~F:P:6000_3600-P:7200_3600-P:7200_4800-P:6000_4800~F:P:6000_6000-P:7200_6000-P:7200_7200-P:6000_7200|CF:F:P:8208_2108-P:7506_2235-P:8400_0-P:8208_2108|CL:L:P:0_0-P:13200_13200~L:P:0_3600-P:13200_1200~L:P:13200_1200-P:3600_6000~L:P:3600_6000-P:0_3600~L:P:8400_0-P:3600_12000~L:P:3600_12000-P:7200_13200~L:P:7200_13200-P:8400_0~L:P:0_8400-P:13200_6000~L:P:13200_6000-P:6000_10800~L:P:6000_10800-P:0_8400~L:P:4800_4800-P:6000_4800-h~L:P:6000_4800-P:6000_6000-h~L:P:6000_6000-P:4800_6000-h~L:P:4800_6000-P:4800_4800-h~L:P:6000_4800-P:7200_4800-h~L:P:7200_4800-P:7200_6000-h~L:P:7200_6000-P:6000_6000-h~L:P:6000_6000-P:6000_4800-h~L:P:7200_4800-P:8400_4800-h~L:P:8400_4800-P:8400_6000-h~L:P:8400_6000-P:7200_6000-h~L:P:7200_6000-P:7200_4800-h~L:P:6000_3600-P:7200_3600-h~L:P:7200_3600-P:7200_4800-h~L:P:7200_4800-P:6000_4800-h~L:P:6000_4800-P:6000_3600-h~L:P:6000_6000-P:7200_6000-h~L:P:7200_6000-P:7200_7200-h~L:P:7200_7200-P:6000_7200-h~L:P:6000_7200-P:6000_6000-h",
+		"GS:1200|GN:11|CD:F:P:2400_6000-P:3600_6000-P:3600_7200-P:2400_7200~F:P:10800_1200-P:12000_1200-P:12000_2400-P:10800_2400|CF:F:P:6600_10200-P:6000_9600-P:7200_9600-P:6600_10200~F:P:7200_3600-P:8400_4800-P:9600_3600-P:7200_3600|CL:L:P:0_0-P:13200_13200~L:P:13200_0-P:0_13200~L:P:0_3600-P:3600_0~L:P:3600_0-P:13200_9600~L:P:13200_9600-P:9600_13200~L:P:9600_13200-P:0_3600~L:P:0_9600-P:9600_0~L:P:9600_0-P:13200_3600~L:P:13200_3600-P:3600_13200~L:P:3600_13200-P:0_9600~L:P:3600_3600-P:9600_3600~L:P:9600_3600-P:9600_9600~L:P:9600_9600-P:3600_9600~L:P:3600_9600-P:3600_3600~L:P:2400_6000-P:3600_6000-h~L:P:3600_6000-P:3600_7200-h~L:P:3600_7200-P:2400_7200-h~L:P:2400_7200-P:2400_6000-h~L:P:10800_1200-P:12000_1200-h~L:P:12000_1200-P:12000_2400-h~L:P:12000_2400-P:10800_2400-h~L:P:10800_2400-P:10800_1200-h",
+		"GS:1200|GN:6|CD:|CF:|CL:L:P:0_0-P:7200_7200~L:P:0_3600-P:7200_3600~L:P:3600_0-P:0_6000~L:P:0_6000-P:7200_6000~L:P:7200_6000-P:3600_0~L:P:7200_0-P:0_7200",
+		"GS:1200|GN:6|CD:F:P:1200_1200-P:2400_1200-P:2400_2400-P:1200_2400~F:P:6000_4800-P:7200_4800-P:7200_6000-P:6000_6000|CF:F:P:5760_3600-P:4950_2250-P:3600_3600-P:5760_3600|CL:L:P:0_0-P:7200_7200~L:P:0_3600-P:7200_3600~L:P:3600_0-P:0_6000~L:P:0_6000-P:7200_6000~L:P:7200_6000-P:3600_0~L:P:7200_0-P:0_7200~L:P:1200_1200-P:2400_1200-h~L:P:2400_1200-P:2400_2400-h~L:P:2400_2400-P:1200_2400-h~L:P:1200_2400-P:1200_1200-h~L:P:6000_4800-P:7200_4800-h~L:P:7200_4800-P:7200_6000-h~L:P:7200_6000-P:6000_6000-h~L:P:6000_6000-P:6000_4800-h",
+	];
 
 	// クラス定義
 	class Point {
@@ -80,7 +95,7 @@
 			};
 		};
 		get isInArea(){
-			return (0 <= this.X && this.X < GRID_MAX && 0 <= this.Y && this.Y < GRID_MAX);
+			return (0 <= this.X && this.X < cvsActive.gridMax && 0 <= this.Y && this.Y < cvsActive.gridMax);
 		};
 		getFill(){
 			return new Fill([this.p00, this.p10, this.p11, this.p01]);
@@ -141,7 +156,7 @@
 		};
 		draw(ctx, color){
 			ctx.strokeStyle = color;
-			ctx.lineWidth = 0.5;
+			ctx.lineWidth = 1;
 			ctx.beginPath();
 			ctx.moveTo(this.p1.drawX, this.p1.drawY);
 			ctx.lineTo(this.p2.drawX, this.p2.drawY);
@@ -185,11 +200,13 @@
 		};
 	};
 	class ExCanvas {
-		constructor(name, z, color){
-			this.cvs = document.getElementById("cvs" + name);
+		constructor(parent, div, name, z, color){
+			this.parent = parent;
+			this.cvs    = document.createElement("canvas");
 			this.cvs.style["z-index"] = z;
-			this.color = color;
-			this.chk   = document.getElementById("chk" + name);
+			this.color  = color;
+			this.chk    = document.getElementById("chk" + name);
+			div.appendChild(this.cvs);
 			this.initialize();
 		};
 		initialize(){
@@ -212,17 +229,21 @@
 			};
 		};
 		setScale(){
-			this.cvs.width  = GRID_PADDING * 2 + GRID_MAX / scale;
-			this.cvs.height = GRID_PADDING * 2 + GRID_MAX / scale;
+			this.cvs.width  = GRID_PADDING * 2 + this.parent.gridMax / scale;
+			this.cvs.height = GRID_PADDING * 2 + this.parent.gridMax / scale;
+		};
+		clear(){
+			var ctx = this.cvs.getContext("2d");
+			ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 		};
 		redraw(){
 			this.cvs.classList[(this.chk.checked ? "remove" : "add")]("hide");
+			this.clear();
 			var ctx = this.cvs.getContext("2d");
-			ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 			for(var i = 0; i < this.obj.length; i++){
 				!(this.obj[i].hidden) ? this.obj[i].draw(ctx, this.color) : "";
 			};
-			modeman.refreshButtons();
+			modeman.refreshButtons(this.parent);
 		};
 		serialize(tag){
 			var ret = [];
@@ -262,14 +283,14 @@
 	class ExCanvasGrid extends ExCanvas {
 		initialize(){
 			super.initialize();
-			for(var i = 0; i <= GRID_NUM; i++){
+			for(var i = 0; i <= this.parent.gridNum; i++){
 				super.addObject(new Line(
 					i * GRID_SIZE, 0,
-					i * GRID_SIZE, GRID_MAX
+					i * GRID_SIZE, this.parent.gridMax
 				));
 				super.addObject(new Line(
-					0,        i * GRID_SIZE,
-					GRID_MAX, i * GRID_SIZE
+					0, i * GRID_SIZE,
+					this.parent.gridMax, i * GRID_SIZE
 				));
 			};
 		};
@@ -278,7 +299,7 @@
 		initialize(){
 			super.initialize();
 			this.points = [];
-			this.addObject(new Line(0, 0, GRID_MAX, GRID_MAX));
+			this.addObject(new Line(0, 0, this.parent.gridMax, this.parent.gridMax));
 		};
 		addLines(ary){
 			for(var i = 0; i < ary.length; i++){
@@ -294,12 +315,13 @@
 			};
 		};
 		delObjects(ary){
+			var self = this;
 			super.delObjects(ary, function(obj, i){
 				if(i == 0){ return; };
 				for(var j = 0; j < obj[i].clist.length; j++){
-					var idx = obj[i].clist[j].inAry(cvsLine.points);
+					var idx = obj[i].clist[j].inAry(self.points);
 					if(idx >= 0){
-						cvsLine.points.splice(idx, 1);
+						self.points.splice(idx, 1);
 					};
 				};
 				obj.splice(i, 1);
@@ -308,7 +330,7 @@
 		getNearPoint(x, y){
 			var ret;
 			var p = new Point(x, y);
-			var minDis = GRID_MAX;
+			var minDis = this.parent.gridMax;
 			for(var i = 0; i < this.points.length; i++){
 				var d = this.points[i].getDistance(p);
 				if(d < minDis){
@@ -328,6 +350,7 @@
 	class ExCanvasTemp extends ExCanvas {
 		initialize(){
 			super.initialize();
+			this.isReadOnly = false;
 			this.isComplete = false;
 			this.points = [];
 			this.lines  = [];
@@ -407,7 +430,6 @@
 						};
 					};
 					break;
-
 				case modeman.isDamageMode:
 					if(!this.points[len - 1].isInArea){ return; };
 					for(var i = 0; i < len - 1; i++){
@@ -416,7 +438,6 @@
 						};
 					};
 					break;
-
 			};
 
 			if(!this.isComplete){
@@ -432,12 +453,142 @@
 				this.points.pop();
 				this.lines.pop();
 			}
-			modeman.refreshButtons();
+			modeman.refreshButtons(this.parent);
 		};
 		setEvents(self){
 			this.cvs.addEventListener("mousemove", function(event){ self.mouseMove(event); }, false);
 			this.cvs.addEventListener("mouseout",  function(event){ self.mouseOut(event); },  false);
 			this.cvs.addEventListener("mouseup",   function(event){ self.mouseUp(event); },   false);
+		};
+	};
+	class MagicCanvas {
+		constructor(div, gridNum, isReadOnly){
+			this.cvsDamage;
+			this.cvsFill;
+			this.cvsGrid;
+			this.cvsLine;
+			this.cvsTemp;
+			this.cvsAry;
+			this.initGrid(gridNum);
+			this.initCanvas(div, isReadOnly)
+		};
+		initGrid(gridNum){
+			this.gridNum = gridNum;
+			this.gridMax = GRID_SIZE * gridNum;
+		};
+		initCanvas = function(div, isReadOnly){
+			this.cvsDamage = new ExCanvasDamage(this, div, "Damage", 0, "#FFA0A0");
+			this.cvsFill   = new ExCanvasFill(  this, div, "Fill",   1, "#00C0FF");
+			this.cvsGrid   = new ExCanvasGrid(  this, div, "Grid",   2, "#808080");
+			this.cvsLine   = new ExCanvasLine(  this, div, "Line",   3, "#0000FF");
+			this.cvsTemp   = new ExCanvasTemp(  this, div, "Temp",   4, "#FF0000");
+			this.cvsAry    = [this.cvsDamage, this.cvsFill, this.cvsGrid, this.cvsLine, this.cvsTemp];
+			isReadOnly ? "" : this.cvsTemp.setEvents(this.cvsTemp);
+		};
+		resize(gridNum){
+			this.initGrid(gridNum);
+			this.cvsGrid.initialize();
+			this.cvsLine.initialize();
+		};
+		setLine = function(){
+			this.cvsLine.addLines(this.cvsTemp.getLines());
+			this.cvsLine.redraw();
+		};
+		delLine = function(){
+			this.cvsLine.delObjects(this.cvsTemp.getLines());
+			if(this.cvsLine.obj.length == 1){
+				modeman.setMode(MODE_LINE);
+			};
+			this.cvsLine.redraw();
+		};
+		setFill = function(){
+			this.cvsFill.addObject(new Fill(this.cvsTemp.getPoints()));
+			this.cvsFill.redraw();
+		};
+		delFill = function(){
+			this.cvsFill.delObjects([new Fill(this.cvsTemp.getPoints())]);
+			if(this.cvsFill.obj.length == 0){
+				modeman.setMode(MODE_LINE);
+			};
+			this.cvsFill.redraw();
+		};
+		setDamage = function(){
+			this.editDamage("add");
+		};
+		delDamage = function(){
+			this.editDamage("del");
+		};
+		editDamage = function(mode){
+
+			var points = this.cvsTemp.getPoints();
+			var fills  = [];
+			var lines  = [];
+			for(var i = 0; i < points.length; i++){
+				if(points[i].isInArea){
+					fills.push(points[i].getFill());
+					lines = lines.concat(points[i].getLines());
+				};
+			};
+
+			this.cvsDamage[(mode == "add" ? "addObjects" : "delObjects")](fills);
+			this.cvsLine[  (mode == "add" ? "addLines"   : "delObjects")](lines);
+
+			if(this.cvsDamage.obj.length == 0){
+				modeman.setMode(MODE_LINE);
+			};
+			this.cvsDamage.redraw();
+			this.cvsLine.redraw();
+
+		};
+		redrawAll = function(){
+			for(var i = 0; i < this.cvsAry.length; i++){
+				this.cvsAry[i].setScale();
+				this.cvsAry[i].redraw();
+			};
+		};
+		resetAll = function(){
+			for(var i = 0; i < this.cvsAry.length; i++){
+				this.cvsAry[i].initialize();
+			};
+			modeman.setMode(MODE_LINE);
+			localStorage.setItem("data", null);
+			resetScale();
+			this.redrawAll();
+		};
+		clearAll = function(){
+			for(var i = 0; i < this.cvsAry.length; i++){
+				this.cvsAry[i].initialize();
+				this.cvsAry[i].clear();
+			};
+		};
+		serialize = function(){
+			var ret = "GS:" + GRID_SIZE + "|";
+			ret += "GN:" + this.gridNum + "|";
+			ret += this.cvsDamage.serialize() + "|";
+			ret += this.cvsFill.serialize() + "|";
+			ret += this.cvsLine.serialize();
+			return ret;
+		};
+		loadData = function(str){
+			if(!(str)){ return; };
+			try{
+				var ary = str.split("|");
+				for(var i = 0; i < ary.length; i++){
+					switch(ary[i].substring(0, 3)){
+						case "GS:": break;	//★
+						case "GN:": this.resize(Number(ary[i].replace("GN:", ""))); break;
+						case "CD:": this.cvsDamage.loadData(ary[i]); break;
+						case "CF:": this.cvsFill.loadData(ary[i]);   break;
+						case "CL:": this.cvsLine.loadData(ary[i]);   break;
+					};
+				};
+				this.redrawAll();
+				modeman.refreshButtons(this);
+			} catch(e) {
+				alert("データの読み込みに失敗しました。");
+				localStorage.setItem("data", null);
+				this.resetAll();
+			};
 		};
 	};
 	class ModeMan {
@@ -449,6 +600,15 @@
 				MODE_DEL_L, MODE_DEL_S, MODE_DEL_F, MODE_DEL_D
 			]);
 			this.btnSubmit = document.getElementById("btnSubmit");
+			this.btnCancel = document.getElementById("btnCancel");
+			this.btnReset  = document.getElementById("btnReset");
+			this.tab = TAB_NONE;
+			this.tabs = [
+				null,
+				document.getElementById("tabMain"),
+				document.getElementById("tabAll"),
+				document.getElementById("tabSub"),
+			];
 		};
 		initButtons(ary){
 			for(var i = 0; i < ary.length; i++){
@@ -472,56 +632,89 @@
 				toggleActive(this.buttons[this.mode]);
 			};
 			this.mode = mode;
-			toggleActive(this.buttons[this.mode]);
-			cancel();
+			if(this.mode != MODE_NONE){
+				toggleActive(this.buttons[this.mode]);
+				cancel();
+			};
 		};
-		refreshButtons(){
-			setEnable(this.buttons[MODE_FILL],  (cvsLine.points.length >= 3));
-			setEnable(this.buttons[MODE_DEL_L], (cvsLine.obj.length > 1));
-			setEnable(this.buttons[MODE_DEL_S], (cvsLine.obj.length > 2));
-			setEnable(this.buttons[MODE_DEL_F], (cvsFill.obj.length > 0));
-			setEnable(this.buttons[MODE_DEL_D], (cvsDamage.obj.length > 0));
-			setEnable(this.btnSubmit, (cvsTemp.isReady));
+		refreshButtons(parent){
+			var isMain = (this.tab == TAB_MAIN);
+			setEnable(this.buttons[MODE_LINE],    isMain);
+			setEnable(this.buttons[MODE_SHAPE],   isMain);
+			setEnable(this.buttons[MODE_DAMAGE],  isMain);
+			setEnable(this.buttons[MODE_FILL],   (isMain && parent.cvsLine.points.length >= 3));
+			setEnable(this.buttons[MODE_DEL_L],  (isMain && parent.cvsLine.obj.length > 1));
+			setEnable(this.buttons[MODE_DEL_S],  (isMain && parent.cvsLine.obj.length > 2));
+			setEnable(this.buttons[MODE_DEL_F],  (isMain && parent.cvsFill.obj.length > 0));
+			setEnable(this.buttons[MODE_DEL_D],  (isMain && parent.cvsDamage.obj.length > 0));
+			setEnable(this.btnSubmit, (isMain && parent.cvsTemp.isReady));
+			setEnable(this.btnCancel,  isMain);
+			setEnable(this.btnReset,   isMain);
+			if(!isMain){
+				this.setMode(MODE_NONE);
+			};
+			if(this.tab == TAB_ALL){
+				setEnable(btnScaleUp,   false);
+				setEnable(btnScaleDown, false);
+			};
+		};
+		setTab(tab, idx){
+			if(this.tab != MODE_NONE){
+				toggleActive(this.tabs[this.tab]);
+			};
+			this.tab = tab;
+			toggleActive(this.tabs[this.tab]);
+			switch(this.tab){
+				case TAB_MAIN: showMain();   break;
+				case TAB_ALL:  showAll();    break;
+				case TAB_SUB:  showSub(idx); break;
+			};
 		};
 	};
 
-	// 処理本体
-	var cvsDamage;
-	var cvsFill;
-	var cvsGrid;
-	var cvsLine;
-	var cvsTemp;
-	var cvsAry;
+	// 全体処理
+	var scale;
 	var modeman;
+	var cvsMain;
+	var cvsSubs = [];
+	var cvsSub;
+	var cvsActive;
+	var cvsAry = [];
 	var btnScaleUp;
 	var btnScaleDown;
 	var divHelp;
-	var scale = SCALE_MAX;
+	var divMain;
+	var divAll;
+	var divSub;
+	var selectName;
 
 	var initialize = function(){
+		createMain();
+		createSub();
 		modeman = new ModeMan();
-		getElements();
-		initCanvas()
-		setScale(0);
-		loadData(localStorage.getItem("data"));
-		modeman.setMode(MODE_LINE);
-		redrawAll();
+		modeman.setTab(TAB_MAIN);
 	};
-
-	var getElements = function(){
+	var createMain = function(){
 		btnScaleUp   = document.getElementById("btnScaleUp");
 		btnScaleDown = document.getElementById("btnScaleDown");
 		divHelp      = document.getElementById("divHelp");
+		divMain      = document.getElementById("divMain");
+		divAll       = document.getElementById("divAll");
+		divSub       = document.getElementById("divSub");
+		cvsMain      = new MagicCanvas(divMain, 11);
 	};
-
-	var initCanvas = function(){
-		cvsDamage = new ExCanvasDamage("Damage", 0, "#FFA0A0");
-		cvsFill   = new ExCanvasFill("Fill", 1, "#00C0FF");
-		cvsGrid   = new ExCanvasGrid("Grid", 2, "#808080");
-		cvsLine   = new ExCanvasLine("Line", 3, "#0000FF");
-		cvsTemp   = new ExCanvasTemp("Temp", 4, "#FF0000");
-		cvsAry    = [cvsDamage, cvsFill, cvsGrid, cvsLine, cvsTemp];
-		cvsTemp.setEvents(cvsTemp);
+	var createSub = function(){
+		cvsSubs = [
+			new MagicCanvas(document.getElementById("divSub1"), 11, true),
+			new MagicCanvas(document.getElementById("divSub2"), 11, true),
+			new MagicCanvas(document.getElementById("divSub3"), 11, true),
+			new MagicCanvas(document.getElementById("divSub4"), 11, true),
+			new MagicCanvas(document.getElementById("divBoss"), 11, true),
+			new MagicCanvas(document.getElementById("divEne1"),  6, true),
+			new MagicCanvas(document.getElementById("divEne2"),  6, true)
+		];
+		cvsSub = new MagicCanvas(document.getElementById("divSub0"), 11, true);
+		selectName = document.getElementById("selectName");
 	};
 
 	var getMousePos = function(event){
@@ -542,7 +735,7 @@
 				);
 				break;
 			case modeman.isFillMode:
-				ret = cvsLine.getNearPoint(posX, posY);
+				ret = cvsActive.cvsLine.getNearPoint(posX, posY);
 				break;
 			case modeman.isDamageMode:
 				ret = new SqrPoint(
@@ -553,8 +746,8 @@
 		};
 
 		return ret;
-	};
 
+	};
 	var getCrossPos = function(line1, line2){
 
 		var x0 = line1.p1.X;
@@ -587,127 +780,53 @@
 
 	};
 
-	var setLine = function(){
-		cvsLine.addLines(cvsTemp.getLines());
-		cvsLine.redraw();
-	};
-	var delLine = function(){
-		cvsLine.delObjects(cvsTemp.getLines());
-		if(cvsLine.obj.length == 1){
-			modeman.setMode(MODE_LINE);
-		};
-		cvsLine.redraw();
-	};
-	var setFill = function(){
-		cvsFill.addObject(new Fill(cvsTemp.getPoints()));
-		cvsFill.redraw();
-	};
-	var delFill = function(){
-		cvsFill.delObjects([new Fill(cvsTemp.getPoints())]);
-		if(cvsFill.obj.length == 0){
-			modeman.setMode(MODE_LINE);
-		};
-		cvsFill.redraw();
-	};
-	var setDamage = function(){
-		editDamage("add");
-	};
-	var delDamage = function(){
-		editDamage("del");
-	};
-	var editDamage = function(mode){
-
-		var points = cvsTemp.getPoints();
-		var fills  = [];
-		var lines  = [];
-		for(var i = 0; i < points.length; i++){
-			if(points[i].isInArea){
-				fills.push(points[i].getFill());
-				lines = lines.concat(points[i].getLines());
-			};
-		};
-
-		cvsDamage[(mode == "add" ? "addObjects" : "delObjects")](fills);
-		cvsLine[  (mode == "add" ? "addLines"   : "delObjects")](lines);
-
-		if(cvsDamage.obj.length == 0){
-			modeman.setMode(MODE_LINE);
-		};
-		cvsDamage.redraw();
-		cvsLine.redraw();
-
-	};
-	var redrawAll = function(){
-		for(var i = 0; i < cvsAry.length; i++){
-			cvsAry[i].setScale();
-			cvsAry[i].redraw();
-		};
-	};
-	var serialize = function(){
-		var ret = "GS:" + GRID_SIZE + "|";
-		ret += cvsDamage.serialize() + "|";
-		ret += cvsFill.serialize() + "|";
-		ret += cvsLine.serialize();
-		return ret;
-	};
-	var loadData = function(str){
-		if(!(str)){ return; };
-		try{
-			var ary = str.split("|");
-			for(var i = 0; i < ary.length; i++){
-				switch(ary[i].substring(0, 3)){
-					case "GS:": break;	//★
-					case "CD:": cvsDamage.loadData(ary[i]); break;
-					case "CF:": cvsFill.loadData(ary[i]);   break;
-					case "CL:": cvsLine.loadData(ary[i]);   break;
-				};
-			};
-			redrawAll();
-			modeman.refreshButtons();
-		} catch(e) {
-			alert("データの読み込みに失敗しました。");
-			localStorage.setItem("data", null);
-			clearAll();
-		};
-	};
-
-	var submit = function(){
-		switch(true){
-			case modeman.mode == MODE_DEL_L:
-			case modeman.mode == MODE_DEL_S: delLine();   break;
-			case modeman.mode == MODE_DEL_F: delFill();   break;
-			case modeman.mode == MODE_DEL_D: delDamage(); break;
-			case modeman.isLineMode:   setLine();   break;
-			case modeman.isFillMode:   setFill();   break;
-			case modeman.isDamageMode: setDamage(); break;
-		};
-		localStorage.setItem("data", serialize());
-		cancel();
-	};
-	var cancel = function(){
-		cvsTemp.initialize();
-		cvsTemp.redraw();
-	};
-	var clearAll = function(flgDialog){
-		var ret = flgDialog ? confirm("キャンバスを初期化します。\nよろしいですか？") : true;
-		if(ret){
-			for(var i = 0; i < cvsAry.length; i++){
-				cvsAry[i].initialize();
-			};
-			modeman.setMode(MODE_LINE);
-			localStorage.setItem("data", null);
-			redrawAll();
-		};
-	};
+	// ボタンアクション
 	var setScale = function(dir){
 		scale += dir * SCALE_PITCH;
 		setEnable(btnScaleUp,   (scale > SCALE_MIN));
 		setEnable(btnScaleDown, (scale < SCALE_MAX));
 		redrawAll();
 	};
+	var resetScale = function(val){
+		scale = val || SCALE_MAX;
+		setScale(0)
+	};
+	var redrawAll = function(){
+		for(var i = 0; i < cvsAry.length; i++){
+			cvsAry[i].redrawAll();
+		};
+	};
+	var clearAll = function(){
+		for(var i = 0; i < cvsAry.length; i++){
+			cvsAry[i].clearAll();
+		};
+	};
+	var submit = function(){
+		switch(true){
+			case modeman.mode == MODE_DEL_L:
+			case modeman.mode == MODE_DEL_S: cvsActive.delLine();   break;
+			case modeman.mode == MODE_DEL_F: cvsActive.delFill();   break;
+			case modeman.mode == MODE_DEL_D: cvsActive.delDamage(); break;
+			case modeman.isLineMode:   cvsActive.setLine();   break;
+			case modeman.isFillMode:   cvsActive.setFill();   break;
+			case modeman.isDamageMode: cvsActive.setDamage(); break;
+		};
+		localStorage.setItem("data", cvsActive.serialize());
+		cancel();
+	};
+	var cancel = function(){
+		cvsActive.cvsTemp.initialize();
+		cvsActive.cvsTemp.redraw();
+	};
+	var resetAll = function(){
+		var ret = confirm("キャンバスを初期化します。\nよろしいですか？");
+		if(ret){
+			cvsActive.resetAll();
+		};
+	};
 	var showHelp = function(event){
 		if(!(document.onclick)){
-			divHelp.classList.remove("hide");
+			setShow(divHelp);
 			document.onclick = hideHelp;
 			cancelEvent(event);
 		} else {
@@ -715,12 +834,70 @@
 		}
 	};
 	var hideHelp = function(){
-		divHelp.classList.add("hide");
+		setHide(divHelp);
 		document.onclick = null;
 	};
+	var hideContents = function(){
+		setHide(divMain);
+		setHide(divAll);
+		setHide(divSub);
+		clearAll();
+	};
+	var showMain = function(){
+		hideContents();
+		cvsAry    = [cvsMain];
+		cvsActive = cvsMain;
+		cvsActive.loadData(localStorage.getItem("data"));
+		resetScale();
+		modeman.setMode(MODE_LINE);
+		setShow(divMain);
+	};
+	var showAll = function(){
+		hideContents();
+		cvsAry    = cvsSubs;
+		cvsActive = null;
+		cvsSubs[0].loadData(localStorage.getItem("data"));
+		for(var i = 1; i < cvsSubs.length; i++){
+			cvsSubs[i].loadData(sampleData[i+1])
+		};
+		resetScale(SCALE_MAX * 2);
+		setShow(divAll);
+	};
+	var showSub = function(idx){
+		if(idx){
+			selectName.selectedIndex = idx;
+		};
+		changeName();
+	};
+	var changeName = function(){
+		hideContents();
+		cvsAry    = [cvsSub];
+		cvsActive = cvsSub;
+		switch(selectName.selectedIndex){
+			case 0:
+				clearAll();
+				redrawAll();
+				break;
+			case 1:
+				cvsActive.loadData(localStorage.getItem("data"));
+				break;
+			default:
+				cvsActive.loadData(sampleData[selectName.selectedIndex]);
+				break;
+		}
+		resetScale();
+		setShow(divSub);
+	};
 
+	// 共通処理
 	var setEnable = function(obj, flg){
 		obj.disabled = flg ? null : "disabled";
+	};
+	var setShow = function(obj){
+		obj.classList.remove("hide");
+	};
+	var setHide = function(obj){
+		obj.classList.add("hide");
 	};
 	var toggleActive = function(obj){
 		obj.classList.toggle("active");
@@ -728,7 +905,6 @@
 	var cancelEvent = function(event){
 		event.stopPropagation();
 	};
-
 	var log = function(txt){ console.log(txt); };
 
 </script>
@@ -742,27 +918,107 @@
 		border-radius: 3px;
 		font-family  : "MS ゴシック";
 		margin       : 2px 0px;
+		cursor       : pointer;
 	}
 	canvas {
 		position: absolute;
+		top     : 0px;
+		left    : 0px;
 	}
 	.menu {
 		position  : fixed;
 		z-index   : 5;
 		background: #FFFFFF;
 	}
+	.tab {
+		position    : fixed;
+		top         : 88px;
+		left        : 20px;
+		width       : 800px;
+		z-index     : 5;
+		border-style: solid;
+		border-width: 0px 0px 1px 0px;
+		background  : #FFFFFF;
+	}
+	.tabButton {
+		margin-left  : 5px;
+		padding      : 0px 20px;
+		border-style : solid;
+		border-width : 1px 1px 0px 1px;
+		border-radius: 8px 8px 0px 0px;
+		cursor       : pointer;
+	}
 	.content {
 		position: absolute;
-		top     : 70px;
+		top     : 110px;
+	}
+	.sub {
+		position: absolute;
+		width   : 387px;
+		height  : 10px;
+		cursor  : pointer;
+	}
+	.name {
+		position : absolute;
+		top      : 50%;
+		left     : 50%;
+		transform: translate(-50%,-50%);
+		font-size: 22px;
+	}
+	.sub1 {
+		top :  20px;
+		left:   0px;
+	}
+	.sub2 {
+		top :  20px;
+		left: 380px;
+	}
+	.sub3 {
+		top : 405px;
+		left:   0px;
+	}
+	.sub4 {
+		top : 405px;
+		left: 380px;
+	}
+	.boss {
+		top :  20px;
+		left: 810px;
+	}
+	.ene {
+		position: absolute;
+		width   : 230px;
+		height  : 10px;
+		cursor  : pointer;
+	}
+	.ene1 {
+		top :  405px;
+		left:  780px;
+	}
+	.ene2 {
+		top :  405px;
+		left: 1000px;
+	}
+	.selectName {
+		position : absolute;
+		top      :  8px;
+		left     : 20px;
+		font-size: 18px;
+		z-index  : 10;
+		cursor   : pointer;
+	}
+	.sub0 {
+		position: absolute;
+		top     : 20px;
 	}
 	.help {
-		position  : fixed;
-		top       : 65;
-		left      : 200;
-		z-index   : 6;
-		padding   : 6px 12px;
-		background: #E0E0E0;
-		border    : 1px solid #000000;
+		position     : fixed;
+		top          : 65px;
+		left         : 200px;
+		z-index      : 6;
+		padding      : 6px 12px;
+		background   : #E0E0E0;
+		border       : 1px solid #000000;
 		border-radius: 3px;
 	}
 	.label {
@@ -810,7 +1066,7 @@
 			<td>
 				<input id="btnSubmit" type="button" value="決定"       onclick="submit()" />
 				<input id="btnCancel" type="button" value="キャンセル" onclick="cancel()" />
-				<input id="btnCancel" type="button" value="初期化"     onclick="clearAll(true)" />
+				<input id="btnReset"  type="button" value="初期化"     onclick="resetAll()" />
 			</td>
 			<td>
 				<input id="btnHelp" type="button" value="？" onclick="showHelp(event)" title="ヘルプ" />
@@ -827,12 +1083,33 @@
 		③間違えた場合は右クリックで一手戻る。<br>
 		④決定ボタンを押す。
 	</div>
-	<div class="content">
-		<canvas id="cvsDamage"></canvas>
-		<canvas id="cvsFill"></canvas>
-		<canvas id="cvsGrid"></canvas>
-		<canvas id="cvsLine"></canvas>
-		<canvas id="cvsTemp"></canvas>
+	<div id="tab" class="tab">
+		<span id="tabMain" class="tabButton" onclick="modeman.setTab(1)">自分</span>
+		<span id="tabAll"  class="tabButton" onclick="modeman.setTab(2)">全員</span>
+		<span id="tabSub"  class="tabButton" onclick="modeman.setTab(3)">個別</span>
+	</div>
+	<div id="divMain" class="content"></div>
+	<div id="divAll"  class="content">
+		<div id="divSub1" class="sub sub1" onclick="modeman.setTab(3, 1)"><span class="name">PC1</span></div>
+		<div id="divSub2" class="sub sub2" onclick="modeman.setTab(3, 2)"><span class="name">PC2</span></div>
+		<div id="divSub3" class="sub sub3" onclick="modeman.setTab(3, 3)"><span class="name">PC3</span></div>
+		<div id="divSub4" class="sub sub4" onclick="modeman.setTab(3, 4)"><span class="name">PC4</span></div>
+		<div id="divBoss" class="sub boss" onclick="modeman.setTab(3, 5)"><span class="name">BOSS</span></div>
+		<div id="divEne1" class="ene ene1" onclick="modeman.setTab(3, 6)"><span class="name">お供1</span></div>
+		<div id="divEne2" class="ene ene2" onclick="modeman.setTab(3, 7)"><span class="name">お供2</span></div>
+	</div>
+	<div id="divSub" class="content">
+		<select id="selectName" class="selectName" onchange="changeName()">
+			<option>------</option>
+			<option>PC1</option>
+			<option>PC2</option>
+			<option>PC3</option>
+			<option>PC4</option>
+			<option>BOSS</option>
+			<option>お供1</option>
+			<option>お供2</option>
+		</select>
+		<div id="divSub0" class="sub0"></div>
 	</div>
 </body>
 
