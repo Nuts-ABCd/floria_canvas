@@ -3,6 +3,7 @@
 
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex">
 <title>翠緑のフローリア 魔法脈描画ツール</title>
 <script language="JavaScript">
 
@@ -15,8 +16,10 @@
 	const POINT_SIZE   = 5;
 	const TAB_NONE     = 0;
 	const TAB_MAIN     = 1;
-	const TAB_ALL      = 2;
-	const TAB_SUB      = 3;
+	const TAB_MOB1     = 2;
+	const TAB_MOB2     = 3;
+	const TAB_ALL      = 98;
+	const TAB_SUB      = 99;
 	const MODE_NONE    = 0;
 	const MODE_LINE    = 11;
 	const MODE_SHAPE   = 12;
@@ -28,7 +31,7 @@
 	const MODE_DEL_D   = 24;
 
 	// サンプルデータ
-	var sampleData = [
+	var canvasData = [
 		"",
 		"",
 		"GS:1200|GN:11|CD:F:P:8400_4800-P:9600_4800-P:9600_6000-P:8400_6000~F:P:9600_4800-P:10800_4800-P:10800_6000-P:9600_6000~F:P:9600_3600-P:10800_3600-P:10800_4800-P:9600_4800~F:P:9600_6000-P:10800_6000-P:10800_7200-P:9600_7200~F:P:10800_4800-P:12000_4800-P:12000_6000-P:10800_6000|CF:|CL:L:P:0_0-P:13200_13200~L:P:0_0-P:1200_13200~L:P:1200_13200-P:2400_12000~L:P:2400_12000-P:0_0~L:P:0_12000-P:12000_12000~L:P:12000_12000-P:10800_13200~L:P:10800_13200-P:0_12000~L:P:0_1200-P:1200_1200~L:P:1200_1200-P:13200_2400~L:P:13200_2400-P:0_1200~L:P:8400_4800-P:9600_4800-h~L:P:9600_4800-P:9600_6000-h~L:P:9600_6000-P:8400_6000-h~L:P:8400_6000-P:8400_4800-h~L:P:9600_4800-P:10800_4800-h~L:P:10800_4800-P:10800_6000-h~L:P:10800_6000-P:9600_6000-h~L:P:9600_6000-P:9600_4800-h~L:P:9600_3600-P:10800_3600-h~L:P:10800_3600-P:10800_4800-h~L:P:10800_4800-P:9600_4800-h~L:P:9600_4800-P:9600_3600-h~L:P:9600_6000-P:10800_6000-h~L:P:10800_6000-P:10800_7200-h~L:P:10800_7200-P:9600_7200-h~L:P:9600_7200-P:9600_6000-h~L:P:10800_4800-P:12000_4800-h~L:P:12000_4800-P:12000_6000-h~L:P:12000_6000-P:10800_6000-h~L:P:10800_6000-P:10800_4800-h~L:P:12000_0-P:13200_13200",
@@ -463,6 +466,7 @@
 	};
 	class MagicCanvas {
 		constructor(div, gridNum, isReadOnly){
+			this.div = div;
 			this.cvsDamage;
 			this.cvsFill;
 			this.cvsGrid;
@@ -484,6 +488,12 @@
 			this.cvsTemp   = new ExCanvasTemp(  this, div, "Temp",   4, "#FF0000");
 			this.cvsAry    = [this.cvsDamage, this.cvsFill, this.cvsGrid, this.cvsLine, this.cvsTemp];
 			isReadOnly ? "" : this.cvsTemp.setEvents(this.cvsTemp);
+		};
+		show(){
+			setShow(this.div);
+		};
+		hide(){
+			setHide(this.div);
 		};
 		resize(gridNum){
 			this.initGrid(gridNum);
@@ -551,7 +561,7 @@
 				this.cvsAry[i].initialize();
 			};
 			modeman.setMode(MODE_LINE);
-			localStorage.setItem("data", null);
+			modeman.saveData(cvsActive.serialize());
 			resetScale();
 			this.redrawAll();
 		};
@@ -569,7 +579,7 @@
 			ret += this.cvsLine.serialize();
 			return ret;
 		};
-		loadData = function(str){
+		loadData = function(str, showAlert){
 			if(!(str)){ return; };
 			try{
 				var ary = str.split("|");
@@ -585,8 +595,7 @@
 				this.redrawAll();
 				modeman.refreshButtons(this);
 			} catch(e) {
-				alert("データの読み込みに失敗しました。");
-				localStorage.setItem("data", null);
+				showAlert ? alert("データの読み込みに失敗しました。") : "";
 				this.resetAll();
 			};
 		};
@@ -594,26 +603,50 @@
 	class ModeMan {
 		constructor(){
 			this.mode = MODE_NONE;
-			this.buttons = [];
+			this.initStorage();
 			this.initButtons([
 				MODE_LINE, MODE_SHAPE, MODE_FILL, MODE_DAMAGE,
 				MODE_DEL_L, MODE_DEL_S, MODE_DEL_F, MODE_DEL_D
 			]);
-			this.btnSubmit = document.getElementById("btnSubmit");
-			this.btnCancel = document.getElementById("btnCancel");
-			this.btnReset  = document.getElementById("btnReset");
-			this.tab = TAB_NONE;
-			this.tabs = [
-				null,
-				document.getElementById("tabMain"),
-				document.getElementById("tabAll"),
-				document.getElementById("tabSub"),
-			];
+			this.initTabs([
+				TAB_MAIN, TAB_MOB1, TAB_MOB2, TAB_ALL, TAB_SUB
+			]);
+		};
+		initStorage(){
+			this.setDefaultData(TAB_MAIN, 11);
+			this.setDefaultData(TAB_MOB1, 6);
+			this.setDefaultData(TAB_MOB2, 6);
+		};
+		setDefaultData(idx, gn){
+			if(!(this.readData(idx))){
+				this.saveData("GN:" + gn, idx);
+			};
 		};
 		initButtons(ary){
+			this.buttons = [];
 			for(var i = 0; i < ary.length; i++){
 				this.buttons[ary[i]] = document.getElementById("btnMode" + ary[i]);
 			};
+			this.btnSubmit = document.getElementById("btnSubmit");
+			this.btnCancel = document.getElementById("btnCancel");
+			this.btnReset  = document.getElementById("btnReset");
+			this.menuSave  = document.getElementById("menuSave");
+			this.menuRead  = document.getElementById("menuRead");
+		};
+		initTabs(ary){
+			this.tab = TAB_NONE;
+			this.tabs = [];
+			for(var i = 0; i < ary.length; i++){
+				this.tabs[ary[i]] = document.getElementById("tabMode" + ary[i]);
+			};
+			(this.isOP ? setHide : setShow)(this.tabs[TAB_MAIN]);
+			(this.isGM ? setShow : setHide)(this.tabs[TAB_MOB1]);
+			(this.isGM ? setShow : setHide)(this.tabs[TAB_MOB2]);
+			(this.isGM ? setShow : setHide)(document.getElementById("divGMMenu"));
+			this.tabs[TAB_MAIN].innerHTML = this.isGM ? "BOSS" : "自分";
+		};
+		initTab(){
+			this.setTab(this.isOP ? TAB_ALL : TAB_MAIN);
 		};
 		get isLineMode(){
 			return ([1, 2].includes(this.mode % 10));
@@ -627,6 +660,19 @@
 		get isDamageMode(){
 			return (this.mode % 10 == 4);
 		};
+		get isPC(){
+			return isStandAlone || this.checkFrameMode("P");
+		};
+		get isGM(){
+			return !isStandAlone && this.checkFrameMode("G");
+		};
+		get isOP(){
+			return !isStandAlone && this.checkFrameMode("O");
+		};
+		checkFrameMode(mode){
+			var key = this.readCanvasKey();
+			return ((key ? key.substring(0, 1) : "") == mode);
+		};
 		setMode(mode){
 			if(this.mode != MODE_NONE){
 				toggleActive(this.buttons[this.mode]);
@@ -638,7 +684,7 @@
 			};
 		};
 		refreshButtons(parent){
-			var isMain = (this.tab == TAB_MAIN);
+			var isMain = [TAB_MAIN, TAB_MOB1, TAB_MOB2].includes(this.tab);
 			setEnable(this.buttons[MODE_LINE],    isMain);
 			setEnable(this.buttons[MODE_SHAPE],   isMain);
 			setEnable(this.buttons[MODE_DAMAGE],  isMain);
@@ -650,6 +696,8 @@
 			setEnable(this.btnSubmit, (isMain && parent.cvsTemp.isReady));
 			setEnable(this.btnCancel,  isMain);
 			setEnable(this.btnReset,   isMain);
+			setEnable(this.menuSave,   isMain);
+			setEnable(this.menuRead,   isMain);
 			if(!isMain){
 				this.setMode(MODE_NONE);
 			};
@@ -665,10 +713,31 @@
 			this.tab = tab;
 			toggleActive(this.tabs[this.tab]);
 			switch(this.tab){
-				case TAB_MAIN: showMain();   break;
-				case TAB_ALL:  showAll();    break;
-				case TAB_SUB:  showSub(idx); break;
+				case TAB_ALL: showAll();    break;
+				case TAB_SUB: showSub(idx); break;
+				default:      showMain();   break;
 			};
+		};
+		refreshTab(){
+			switch(this.tab){
+				case TAB_ALL: showAll();  break;
+				case TAB_SUB: loadSub();  break;
+			};
+		};
+		saveCanvasKey(key){
+			localStorage.setItem("floria.canvasKey", key);
+		};
+		readCanvasKey(){
+			return localStorage.getItem("floria.canvasKey");
+		};
+		saveData(data, idx){
+			localStorage.setItem(this.getDataKey(idx), data);
+		};
+		readData(idx){
+			return localStorage.getItem(this.getDataKey(idx));
+		};
+		getDataKey(idx){
+			return "floria.data" + (idx || (isStandAlone ? "0" : this.tab))
 		};
 	};
 
@@ -682,21 +751,25 @@
 	var cvsAry = [];
 	var btnScaleUp;
 	var btnScaleDown;
+	var divMenu;
 	var divHelp;
 	var divMain;
 	var divAll;
 	var divSub;
 	var selectName;
+	var isStandAlone = true;
 
 	var initialize = function(){
 		createMain();
 		createSub();
 		modeman = new ModeMan();
-		modeman.setTab(TAB_MAIN);
+		modeman.initTab();
+		initialize2();
 	};
 	var createMain = function(){
 		btnScaleUp   = document.getElementById("btnScaleUp");
 		btnScaleDown = document.getElementById("btnScaleDown");
+		divMenu      = document.getElementById("divMenu");
 		divHelp      = document.getElementById("divHelp");
 		divMain      = document.getElementById("divMain");
 		divAll       = document.getElementById("divAll");
@@ -716,6 +789,7 @@
 		cvsSub = new MagicCanvas(document.getElementById("divSub0"), 11, true);
 		selectName = document.getElementById("selectName");
 	};
+	var initialize2 = function(){};
 
 	var getMousePos = function(event){
 
@@ -811,9 +885,12 @@
 			case modeman.isFillMode:   cvsActive.setFill();   break;
 			case modeman.isDamageMode: cvsActive.setDamage(); break;
 		};
-		localStorage.setItem("data", cvsActive.serialize());
+		var data = cvsActive.serialize();
+		modeman.saveData(data);
 		cancel();
+		putCanvasData(data);
 	};
+	var putCanvasData = function(data){};
 	var cancel = function(){
 		cvsActive.cvsTemp.initialize();
 		cvsActive.cvsTemp.redraw();
@@ -822,9 +899,25 @@
 		var ret = confirm("キャンバスを初期化します。\nよろしいですか？");
 		if(ret){
 			cvsActive.resetAll();
+			putCanvasData("");
 		};
 	};
+	var showMenu = function(event){
+		hideHelp();
+		if(!(document.onclick)){
+			setShow(divMenu);
+			document.onclick = hideMenu;
+			cancelEvent(event);
+		} else {
+			hideMenu();
+		}
+	};
+	var hideMenu = function(){
+		setHide(divMenu);
+		document.onclick = null;
+	};
 	var showHelp = function(event){
+		hideMenu();
 		if(!(document.onclick)){
 			setShow(divHelp);
 			document.onclick = hideHelp;
@@ -837,6 +930,48 @@
 		setHide(divHelp);
 		document.onclick = null;
 	};
+	var downloadData = async function(){
+		hideMenu();
+		try {
+			var data = new Blob([cvsActive.serialize()], { type : "text/plain" });
+			var url  = URL.createObjectURL(data);
+			var link = document.createElement('a');
+			link.href = url;
+			link.download = "CanvasData";
+			link.click();
+			URL.revokeObjectURL(url);
+		} catch(error){
+			alert(error);
+		};
+	};
+	var uploadData = async function(){
+		hideMenu();
+		var ret = window.confirm("現在のキャンバスに上書きしてよろしいですか？");
+		if(ret){
+			var loader = document.getElementById("uploader");
+			loader.onchange = readFile;
+			loader.click();
+		};
+	};
+	var readFile = function(){
+		var file = this.files[0];
+		if(file){
+			try {
+				var reader = new FileReader();
+				reader.onload = function(e){
+					var data = e.target.result;
+					modeman.saveData(data);
+					showMain();
+					putCanvasData(data);
+				};
+				reader.readAsText(file);
+			} catch(error){
+				alert(error);
+			} finally {
+				this.value = "";
+			};
+		};
+	};
 	var hideContents = function(){
 		setHide(divMain);
 		setHide(divAll);
@@ -847,7 +982,7 @@
 		hideContents();
 		cvsAry    = [cvsMain];
 		cvsActive = cvsMain;
-		cvsActive.loadData(localStorage.getItem("data"));
+		cvsActive.loadData(modeman.readData());
 		resetScale();
 		modeman.setMode(MODE_LINE);
 		setShow(divMain);
@@ -856,12 +991,19 @@
 		hideContents();
 		cvsAry    = cvsSubs;
 		cvsActive = null;
-		cvsSubs[0].loadData(localStorage.getItem("data"));
-		for(var i = 1; i < cvsSubs.length; i++){
-			cvsSubs[i].loadData(sampleData[i+1])
+		if(isStandAlone){
+			canvasData[1] = modeman.readData(0);
+		};
+		for(var i = 0; i < cvsSubs.length; i++){
+			cvsSubs[i].loadData(canvasData[i+1], false);
 		};
 		resetScale(SCALE_MAX * 2);
 		setShow(divAll);
+	};
+	var showEnemy = function(flg){
+		for(var i = 4; i <= 6; i++){
+			cvsSubs[i][flg ? "show" : "hide"]();
+		};
 	};
 	var showSub = function(idx){
 		if(idx){
@@ -869,20 +1011,23 @@
 		};
 		changeName();
 	};
+	var loadSub = function(){
+		cvsActive.loadData(canvasData[selectName.selectedIndex]);
+	};
 	var changeName = function(){
 		hideContents();
 		cvsAry    = [cvsSub];
 		cvsActive = cvsSub;
-		switch(selectName.selectedIndex){
-			case 0:
+		switch(true){
+			case (selectName.selectedIndex == 0):
 				clearAll();
 				redrawAll();
 				break;
-			case 1:
-				cvsActive.loadData(localStorage.getItem("data"));
+			case (selectName.selectedIndex == 1 && isStandAlone):
+				cvsActive.loadData(modeman.readData(0));
 				break;
 			default:
-				cvsActive.loadData(sampleData[selectName.selectedIndex]);
+				loadSub();
 				break;
 		}
 		resetScale();
@@ -905,7 +1050,6 @@
 	var cancelEvent = function(event){
 		event.stopPropagation();
 	};
-	var log = function(txt){ console.log(txt); };
 
 </script>
 <style>
@@ -925,17 +1069,21 @@
 		top     : 0px;
 		left    : 0px;
 	}
-	.menu {
-		position  : fixed;
-		z-index   : 5;
+	.mainFrame {
+		position: relative;
+	}
+	.head {
+		position: fixed;
+		z-index : 8;
+	}
+	.control {
 		background: #FFFFFF;
 	}
 	.tab {
-		position    : fixed;
-		top         : 88px;
-		left        : 20px;
+		position    : absolute;
+		top         : 80px;
+		left        : 12px;
 		width       : 800px;
-		z-index     : 5;
 		border-style: solid;
 		border-width: 0px 0px 1px 0px;
 		background  : #FFFFFF;
@@ -947,10 +1095,11 @@
 		border-width : 1px 1px 0px 1px;
 		border-radius: 8px 8px 0px 0px;
 		cursor       : pointer;
+		user-select  : none;
 	}
 	.content {
 		position: absolute;
-		top     : 110px;
+		top     : 102px;
 	}
 	.sub {
 		position: absolute;
@@ -1011,11 +1160,34 @@
 		position: absolute;
 		top     : 20px;
 	}
+	.menu {
+		position     : absolute;
+		top          : 60px;
+		left         : 700px;
+		z-index      : 10;
+		background   : #FFFFFF;
+		border       : 1px solid #000000;
+		border-radius: 3px;
+	}
+	.menuItem {
+		width        : 100%;
+		text-align   : left;
+		padding      : 2px 6px;
+		border       : none;
+		border-radius: 0px;
+		background   : #FFFFFF;
+		cursor       : pointer;
+		user-select  : none;
+	}
+	.menuItem:hover {
+		color     : #FFFFFF;
+		background: #00A0FF;
+	}
 	.help {
-		position     : fixed;
-		top          : 65px;
+		position     : absolute;
+		top          : 60px;
 		left         : 200px;
-		z-index      : 6;
+		z-index      : 10;
 		padding      : 6px 12px;
 		background   : #E0E0E0;
 		border       : 1px solid #000000;
@@ -1035,81 +1207,97 @@
 </head>
 
 <body oncontextmenu="return false;" onload="initialize()">
-	<table class="menu">
-		<tr>
-			<td>
-				<input id="btnScaleUp"   type="button" value="＋" onclick="setScale(-1)" title="拡大" />
-				<input id="btnScaleDown" type="button" value="－" onclick="setScale( 1)" title="縮小" />
-			</td>
-			<td>
-				表示切替<br>
-				<input id="chkGrid"   type="checkbox" checked="true" onclick="redrawAll()">マス</input>
-				<input id="chkLine"   type="checkbox" checked="true" onclick="redrawAll()">線</input>
-				<input id="chkFill"   type="checkbox" checked="true" onclick="redrawAll()">塗</input>
-				<br>
-				<input id="chkDamage" type="checkbox" checked="true" onclick="redrawAll()">ダメージ</input>
-				<input id="chkTemp"   type="checkbox" checked="true" onclick="redrawAll()" class="hide"></input>
-			</td>
-			<td>
-				<span class="label">描画 :</span>
-				<input id="btnMode11" type="button" value="／" onclick="modeman.setMode(11)" title="直線" />
-				<input id="btnMode12" type="button" value="☆" onclick="modeman.setMode(12)" title="多角形" />
-				<input id="btnMode13" type="button" value="★" onclick="modeman.setMode(13)" title="塗潰し" />
-				<input id="btnMode14" type="button" value="■" onclick="modeman.setMode(14)" title="ダメージ塗り" />
-				<br>
-				<span class="label">削除 :</span>
-				<input id="btnMode21" type="button" value="／" onclick="modeman.setMode(21)" title="直線削除" />
-				<input id="btnMode22" type="button" value="☆" onclick="modeman.setMode(22)" title="多角形削除" />
-				<input id="btnMode23" type="button" value="★" onclick="modeman.setMode(23)" title="塗り削除" />
-				<input id="btnMode24" type="button" value="■" onclick="modeman.setMode(24)" title="ダメージ削除" />
-			</td>
-			<td>
-				<input id="btnSubmit" type="button" value="決定"       onclick="submit()" />
-				<input id="btnCancel" type="button" value="キャンセル" onclick="cancel()" />
-				<input id="btnReset"  type="button" value="初期化"     onclick="resetAll()" />
-			</td>
-			<td>
-				<input id="btnHelp" type="button" value="？" onclick="showHelp(event)" title="ヘルプ" />
-			</td>
-		</tr>
-	</table>
-	<div id = "divHelp" class="help hide" onclick="cancelEvent(event)">
-		■操作方法■<br>
-		①モードを選ぶ。<br>
-		②左クリックで対象を指定する。<br>
-		　直線　　：2点を指定する。<br>
-		　多角形　：始点に戻るか、末尾の点を再度選択するまで連続で指定する。<br>
-		　ダメージ：マス単位で指定する。<br>
-		③間違えた場合は右クリックで一手戻る。<br>
-		④決定ボタンを押す。
-	</div>
-	<div id="tab" class="tab">
-		<span id="tabMain" class="tabButton" onclick="modeman.setTab(1)">自分</span>
-		<span id="tabAll"  class="tabButton" onclick="modeman.setTab(2)">全員</span>
-		<span id="tabSub"  class="tabButton" onclick="modeman.setTab(3)">個別</span>
-	</div>
-	<div id="divMain" class="content"></div>
-	<div id="divAll"  class="content">
-		<div id="divSub1" class="sub sub1" onclick="modeman.setTab(3, 1)"><span class="name">PC1</span></div>
-		<div id="divSub2" class="sub sub2" onclick="modeman.setTab(3, 2)"><span class="name">PC2</span></div>
-		<div id="divSub3" class="sub sub3" onclick="modeman.setTab(3, 3)"><span class="name">PC3</span></div>
-		<div id="divSub4" class="sub sub4" onclick="modeman.setTab(3, 4)"><span class="name">PC4</span></div>
-		<div id="divBoss" class="sub boss" onclick="modeman.setTab(3, 5)"><span class="name">BOSS</span></div>
-		<div id="divEne1" class="ene ene1" onclick="modeman.setTab(3, 6)"><span class="name">お供1</span></div>
-		<div id="divEne2" class="ene ene2" onclick="modeman.setTab(3, 7)"><span class="name">お供2</span></div>
-	</div>
-	<div id="divSub" class="content">
-		<select id="selectName" class="selectName" onchange="changeName()">
-			<option>------</option>
-			<option>PC1</option>
-			<option>PC2</option>
-			<option>PC3</option>
-			<option>PC4</option>
-			<option>BOSS</option>
-			<option>お供1</option>
-			<option>お供2</option>
-		</select>
-		<div id="divSub0" class="sub0"></div>
+	<div class="mainFrame">
+		<div class="head">
+			<table class="control">
+				<tr>
+					<td>
+						<input id="btnScaleUp"   type="button" value="＋" onclick="setScale(-1)" title="拡大" />
+						<input id="btnScaleDown" type="button" value="－" onclick="setScale( 1)" title="縮小" />
+					</td>
+					<td>
+						表示切替<br>
+						<input id="chkGrid"   type="checkbox" checked="true" onclick="redrawAll()" /><label for="chkGrid">マス</label>
+						<input id="chkLine"   type="checkbox" checked="true" onclick="redrawAll()" /><label for="chkLine">線</label>
+						<input id="chkFill"   type="checkbox" checked="true" onclick="redrawAll()" /><label for="chkFill">塗</label>
+						<br>
+						<input id="chkDamage" type="checkbox" checked="true" onclick="redrawAll()" /><label for="chkDamage">ダメージ</label>
+						<input id="chkTemp"   type="checkbox" checked="true" onclick="redrawAll()" class="hide" />
+					</td>
+					<td>
+						<span class="label">描画 :</span>
+						<input id="btnMode11" type="button" value="／" onclick="modeman.setMode(11)" title="直線" />
+						<input id="btnMode12" type="button" value="☆" onclick="modeman.setMode(12)" title="多角形" />
+						<input id="btnMode13" type="button" value="★" onclick="modeman.setMode(13)" title="塗潰し" />
+						<input id="btnMode14" type="button" value="■" onclick="modeman.setMode(14)" title="ダメージ塗り" />
+						<br>
+						<span class="label">削除 :</span>
+						<input id="btnMode21" type="button" value="／" onclick="modeman.setMode(21)" title="直線削除" />
+						<input id="btnMode22" type="button" value="☆" onclick="modeman.setMode(22)" title="多角形削除" />
+						<input id="btnMode23" type="button" value="★" onclick="modeman.setMode(23)" title="塗り削除" />
+						<input id="btnMode24" type="button" value="■" onclick="modeman.setMode(24)" title="ダメージ削除" />
+					</td>
+					<td>
+						<input id="btnSubmit" type="button" value="決定"       onclick="submit()" />
+						<input id="btnCancel" type="button" value="キャンセル" onclick="cancel()" />
+						<input id="btnReset"  type="button" value="初期化"     onclick="resetAll()" />
+					</td>
+					<td>
+						<input id="btnMenu" type="button" value="≡" onclick="showMenu(event)" title="メニュー" />
+						<input id="btnHelp" type="button" value="？" onclick="showHelp(event)" title="ヘルプ" />
+					</td>
+				</tr>
+			</table>
+			<div id="divMenu" class="menu hide" onclick="cancelEvent(event)">
+				<input id="menuSave" class="menuItem" type="button" value="データ保存" onclick="downloadData()" />
+				<input id="menuRead" class="menuItem" type="button" value="データ読込" onclick="uploadData()" />
+				<input id="uploader" type="file" class="hide" />
+				<div id="divGMMenu">
+					<input type="button" class="menuItem" value="敵情報公開" onclick="setEnemyVisible()" />
+					<input type="button" class="menuItem" value="部屋削除"   onclick="deleteRoom()" />
+				</div>
+			</div>
+			<div id = "divHelp" class="help hide" onclick="cancelEvent(event)">
+				■操作方法■<br>
+				①モードを選ぶ。<br>
+				②左クリックで対象を指定する。<br>
+				　直線　　：2点を指定する。<br>
+				　多角形　：始点に戻るか、末尾の点を再度選択するまで連続で指定する。<br>
+				　ダメージ：マス単位で指定する。<br>
+				③間違えた場合は右クリックで一手戻る。<br>
+				④決定ボタンを押す。
+			</div>
+			<div id="tab" class="tab">
+				<span id="tabMode1"  class="tabButton" onclick="modeman.setTab(1)" >自分</span>
+				<span id="tabMode2"  class="tabButton" onclick="modeman.setTab(2)" >お供1</span>
+				<span id="tabMode3"  class="tabButton" onclick="modeman.setTab(3)" >お供2</span>
+				<span id="tabMode98" class="tabButton" onclick="modeman.setTab(98)">全員</span>
+				<span id="tabMode99" class="tabButton" onclick="modeman.setTab(99)">個別</span>
+			</div>
+		</div>
+		<div id="divMain" class="content hide"></div>
+		<div id="divAll"  class="content hide">
+			<div id="divSub1" class="sub sub1" onclick="modeman.setTab(99, 1)"><span class="name">PC1</span></div>
+			<div id="divSub2" class="sub sub2" onclick="modeman.setTab(99, 2)"><span class="name">PC2</span></div>
+			<div id="divSub3" class="sub sub3" onclick="modeman.setTab(99, 3)"><span class="name">PC3</span></div>
+			<div id="divSub4" class="sub sub4" onclick="modeman.setTab(99, 4)"><span class="name">PC4</span></div>
+			<div id="divBoss" class="sub boss" onclick="modeman.setTab(99, 5)"><span class="name">BOSS</span></div>
+			<div id="divEne1" class="ene ene1" onclick="modeman.setTab(99, 6)"><span class="name">お供1</span></div>
+			<div id="divEne2" class="ene ene2" onclick="modeman.setTab(99, 7)"><span class="name">お供2</span></div>
+		</div>
+		<div id="divSub" class="content hide">
+			<select id="selectName" class="selectName" onchange="changeName()">
+				<option>------</option>
+				<option>PC1</option>
+				<option>PC2</option>
+				<option>PC3</option>
+				<option>PC4</option>
+				<option>BOSS</option>
+				<option>お供1</option>
+				<option>お供2</option>
+			</select>
+			<div id="divSub0" class="sub0"></div>
+		</div>
 	</div>
 </body>
 
