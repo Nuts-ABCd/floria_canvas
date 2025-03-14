@@ -8,38 +8,56 @@
 <script language="JavaScript">
 
 	// 定数定義
-	const GRID_SIZE    = 1200;
-	const GRID_PADDING = 20;
-	const SCALE_MAX    = 19;
-	const SCALE_MIN    = 4;
-	const SCALE_PITCH  = 5;
-	const POINT_SIZE   = 5;
-	const TAB_NONE     = 0;
-	const TAB_MAIN     = 1;
-	const TAB_MOB1     = 2;
-	const TAB_MOB2     = 3;
-	const TAB_ALL      = 98;
-	const TAB_SUB      = 99;
-	const MODE_NONE    = 0;
-	const MODE_LINE    = 11;
-	const MODE_SHAPE   = 12;
-	const MODE_FILL    = 13;
-	const MODE_DAMAGE  = 14;
-	const MODE_DEL_L   = 21;
-	const MODE_DEL_S   = 22;
-	const MODE_DEL_F   = 23;
-	const MODE_DEL_D   = 24;
+	const GRID_SIZE      = 1200;
+	const GRID_PADDING_T = 50;
+	const GRID_PADDING_L = 30;
+	const GRID_PADDING_E = 20;
+	const SCALE_MAX      = 19;
+	const SCALE_MIN      = 4;
+	const SCALE_PITCH    = 5;
+	const POINT_SIZE     = 5;
+	const FONT_SIZE_NL   = 28;
+	const FONT_SIZE_NS   = 22;
+	const FONT_SIZE_GL   = 18;
+	const FONT_SIZE_GS   = 12;
+	const FONT_FAMILY    = "Meiryo";
+	const TAB_NONE       = 0;
+	const TAB_MAIN       = 1;
+	const TAB_MOB1       = 2;
+	const TAB_MOB2       = 3;
+	const TAB_ALL        = 98;
+	const TAB_SUB        = 99;
+	const MODE_NONE      = 0;
+	const MODE_LINE      = 11;
+	const MODE_SHAPE     = 12;
+	const MODE_FILL      = 13;
+	const MODE_DAMAGE    = 14;
+	const MODE_DEL_L     = 21;
+	const MODE_DEL_S     = 22;
+	const MODE_DEL_F     = 23;
+	const MODE_DEL_D     = 24;
+
+	const COLOR_PALETTE = [
+		"#0000FF",
+		"#00C0C0",
+		"#00A000",
+		"#00E000",
+		"#C00000",
+		"#E000E0",
+		"#A0A000",
+		"#E0E000"
+	];
 
 	// サンプルデータ
 	var canvasData = [
 		"",
 		"",
-		"GS:1200|GN:11|CD:F:P:8400_4800-P:9600_4800-P:9600_6000-P:8400_6000~F:P:9600_4800-P:10800_4800-P:10800_6000-P:9600_6000~F:P:9600_3600-P:10800_3600-P:10800_4800-P:9600_4800~F:P:9600_6000-P:10800_6000-P:10800_7200-P:9600_7200~F:P:10800_4800-P:12000_4800-P:12000_6000-P:10800_6000|CF:|CL:L:P:0_0-P:13200_13200~L:P:0_0-P:1200_13200~L:P:1200_13200-P:2400_12000~L:P:2400_12000-P:0_0~L:P:0_12000-P:12000_12000~L:P:12000_12000-P:10800_13200~L:P:10800_13200-P:0_12000~L:P:0_1200-P:1200_1200~L:P:1200_1200-P:13200_2400~L:P:13200_2400-P:0_1200~L:P:8400_4800-P:9600_4800-h~L:P:9600_4800-P:9600_6000-h~L:P:9600_6000-P:8400_6000-h~L:P:8400_6000-P:8400_4800-h~L:P:9600_4800-P:10800_4800-h~L:P:10800_4800-P:10800_6000-h~L:P:10800_6000-P:9600_6000-h~L:P:9600_6000-P:9600_4800-h~L:P:9600_3600-P:10800_3600-h~L:P:10800_3600-P:10800_4800-h~L:P:10800_4800-P:9600_4800-h~L:P:9600_4800-P:9600_3600-h~L:P:9600_6000-P:10800_6000-h~L:P:10800_6000-P:10800_7200-h~L:P:10800_7200-P:9600_7200-h~L:P:9600_7200-P:9600_6000-h~L:P:10800_4800-P:12000_4800-h~L:P:12000_4800-P:12000_6000-h~L:P:12000_6000-P:10800_6000-h~L:P:10800_6000-P:10800_4800-h~L:P:12000_0-P:13200_13200",
-		"GS:1200|GN:11|CD:|CF:F:P:3300_2400-P:3600_1200-P:3900_2400-P:6000_2400-P:4320_4080-P:4800_6000-P:3600_4800-P:2400_6000-P:2880_4080-P:1200_2400-P:3300_2400~F:P:10800_8160-P:12000_7200-P:12372_8317-P:10800_8160~F:P:2898_9746-P:2260_8791-P:0_10800-P:2898_9746|CL:L:P:0_0-P:13200_13200~L:P:1200_2400-P:6000_2400~L:P:6000_2400-P:2400_6000~L:P:2400_6000-P:3600_1200~L:P:3600_1200-P:4800_6000~L:P:4800_6000-P:1200_2400~L:P:6000_12000-P:12000_7200~L:P:12000_7200-P:13200_10800~L:P:13200_10800-P:9600_13200~L:P:9600_13200-P:6000_12000~L:P:3600_10800-P:13200_8400~L:P:13200_8400-P:1200_7200~L:P:1200_7200-P:3600_10800~L:P:10800_1200-P:0_10800~L:P:0_10800-P:13200_6000~L:P:13200_6000-P:10800_1200",
-		"GS:1200|GN:11|CD:F:P:4800_4800-P:6000_4800-P:6000_6000-P:4800_6000~F:P:6000_4800-P:7200_4800-P:7200_6000-P:6000_6000~F:P:7200_4800-P:8400_4800-P:8400_6000-P:7200_6000~F:P:6000_3600-P:7200_3600-P:7200_4800-P:6000_4800~F:P:6000_6000-P:7200_6000-P:7200_7200-P:6000_7200|CF:F:P:8208_2108-P:7506_2235-P:8400_0-P:8208_2108|CL:L:P:0_0-P:13200_13200~L:P:0_3600-P:13200_1200~L:P:13200_1200-P:3600_6000~L:P:3600_6000-P:0_3600~L:P:8400_0-P:3600_12000~L:P:3600_12000-P:7200_13200~L:P:7200_13200-P:8400_0~L:P:0_8400-P:13200_6000~L:P:13200_6000-P:6000_10800~L:P:6000_10800-P:0_8400~L:P:4800_4800-P:6000_4800-h~L:P:6000_4800-P:6000_6000-h~L:P:6000_6000-P:4800_6000-h~L:P:4800_6000-P:4800_4800-h~L:P:6000_4800-P:7200_4800-h~L:P:7200_4800-P:7200_6000-h~L:P:7200_6000-P:6000_6000-h~L:P:6000_6000-P:6000_4800-h~L:P:7200_4800-P:8400_4800-h~L:P:8400_4800-P:8400_6000-h~L:P:8400_6000-P:7200_6000-h~L:P:7200_6000-P:7200_4800-h~L:P:6000_3600-P:7200_3600-h~L:P:7200_3600-P:7200_4800-h~L:P:7200_4800-P:6000_4800-h~L:P:6000_4800-P:6000_3600-h~L:P:6000_6000-P:7200_6000-h~L:P:7200_6000-P:7200_7200-h~L:P:7200_7200-P:6000_7200-h~L:P:6000_7200-P:6000_6000-h",
-		"GS:1200|GN:11|CD:F:P:2400_6000-P:3600_6000-P:3600_7200-P:2400_7200~F:P:10800_1200-P:12000_1200-P:12000_2400-P:10800_2400|CF:F:P:6600_10200-P:6000_9600-P:7200_9600-P:6600_10200~F:P:7200_3600-P:8400_4800-P:9600_3600-P:7200_3600|CL:L:P:0_0-P:13200_13200~L:P:13200_0-P:0_13200~L:P:0_3600-P:3600_0~L:P:3600_0-P:13200_9600~L:P:13200_9600-P:9600_13200~L:P:9600_13200-P:0_3600~L:P:0_9600-P:9600_0~L:P:9600_0-P:13200_3600~L:P:13200_3600-P:3600_13200~L:P:3600_13200-P:0_9600~L:P:3600_3600-P:9600_3600~L:P:9600_3600-P:9600_9600~L:P:9600_9600-P:3600_9600~L:P:3600_9600-P:3600_3600~L:P:2400_6000-P:3600_6000-h~L:P:3600_6000-P:3600_7200-h~L:P:3600_7200-P:2400_7200-h~L:P:2400_7200-P:2400_6000-h~L:P:10800_1200-P:12000_1200-h~L:P:12000_1200-P:12000_2400-h~L:P:12000_2400-P:10800_2400-h~L:P:10800_2400-P:10800_1200-h",
-		"GS:1200|GN:6|CD:|CF:|CL:L:P:0_0-P:7200_7200~L:P:0_3600-P:7200_3600~L:P:3600_0-P:0_6000~L:P:0_6000-P:7200_6000~L:P:7200_6000-P:3600_0~L:P:7200_0-P:0_7200",
-		"GS:1200|GN:6|CD:F:P:1200_1200-P:2400_1200-P:2400_2400-P:1200_2400~F:P:6000_4800-P:7200_4800-P:7200_6000-P:6000_6000|CF:F:P:5760_3600-P:4950_2250-P:3600_3600-P:5760_3600|CL:L:P:0_0-P:7200_7200~L:P:0_3600-P:7200_3600~L:P:3600_0-P:0_6000~L:P:0_6000-P:7200_6000~L:P:7200_6000-P:3600_0~L:P:7200_0-P:0_7200~L:P:1200_1200-P:2400_1200-h~L:P:2400_1200-P:2400_2400-h~L:P:2400_2400-P:1200_2400-h~L:P:1200_2400-P:1200_1200-h~L:P:6000_4800-P:7200_4800-h~L:P:7200_4800-P:7200_6000-h~L:P:7200_6000-P:6000_6000-h~L:P:6000_6000-P:6000_4800-h",
+		"GS:1200|GN:11|NM:PC2|CD:F:P:8400_4800-P:9600_4800-P:9600_6000-P:8400_6000~F:P:9600_4800-P:10800_4800-P:10800_6000-P:9600_6000~F:P:9600_3600-P:10800_3600-P:10800_4800-P:9600_4800~F:P:9600_6000-P:10800_6000-P:10800_7200-P:9600_7200~F:P:10800_4800-P:12000_4800-P:12000_6000-P:10800_6000|CF:|CL:L:P:0_0-P:13200_13200~L:P:0_0-P:1200_13200~L:P:1200_13200-P:2400_12000~L:P:2400_12000-P:0_0~L:P:0_12000-P:12000_12000~L:P:12000_12000-P:10800_13200~L:P:10800_13200-P:0_12000~L:P:0_1200-P:1200_1200~L:P:1200_1200-P:13200_2400~L:P:13200_2400-P:0_1200~L:P:8400_4800-P:9600_4800-h~L:P:9600_4800-P:9600_6000-h~L:P:9600_6000-P:8400_6000-h~L:P:8400_6000-P:8400_4800-h~L:P:9600_4800-P:10800_4800-h~L:P:10800_4800-P:10800_6000-h~L:P:10800_6000-P:9600_6000-h~L:P:9600_6000-P:9600_4800-h~L:P:9600_3600-P:10800_3600-h~L:P:10800_3600-P:10800_4800-h~L:P:10800_4800-P:9600_4800-h~L:P:9600_4800-P:9600_3600-h~L:P:9600_6000-P:10800_6000-h~L:P:10800_6000-P:10800_7200-h~L:P:10800_7200-P:9600_7200-h~L:P:9600_7200-P:9600_6000-h~L:P:10800_4800-P:12000_4800-h~L:P:12000_4800-P:12000_6000-h~L:P:12000_6000-P:10800_6000-h~L:P:10800_6000-P:10800_4800-h~L:P:12000_0-P:13200_13200",
+		"GS:1200|GN:11|NM:PC3|CD:|CF:F:P:3300_2400-P:3600_1200-P:3900_2400-P:6000_2400-P:4320_4080-P:4800_6000-P:3600_4800-P:2400_6000-P:2880_4080-P:1200_2400-P:3300_2400~F:P:10800_8160-P:12000_7200-P:12372_8317-P:10800_8160~F:P:2898_9746-P:2260_8791-P:0_10800-P:2898_9746|CL:L:P:0_0-P:13200_13200~L:P:1200_2400-P:6000_2400~L:P:6000_2400-P:2400_6000~L:P:2400_6000-P:3600_1200~L:P:3600_1200-P:4800_6000~L:P:4800_6000-P:1200_2400~L:P:6000_12000-P:12000_7200~L:P:12000_7200-P:13200_10800~L:P:13200_10800-P:9600_13200~L:P:9600_13200-P:6000_12000~L:P:3600_10800-P:13200_8400~L:P:13200_8400-P:1200_7200~L:P:1200_7200-P:3600_10800~L:P:10800_1200-P:0_10800~L:P:0_10800-P:13200_6000~L:P:13200_6000-P:10800_1200",
+		"GS:1200|GN:11|NM:PC4|CD:F:P:4800_4800-P:6000_4800-P:6000_6000-P:4800_6000~F:P:6000_4800-P:7200_4800-P:7200_6000-P:6000_6000~F:P:7200_4800-P:8400_4800-P:8400_6000-P:7200_6000~F:P:6000_3600-P:7200_3600-P:7200_4800-P:6000_4800~F:P:6000_6000-P:7200_6000-P:7200_7200-P:6000_7200|CF:F:P:8208_2108-P:7506_2235-P:8400_0-P:8208_2108|CL:L:P:0_0-P:13200_13200~L:P:0_3600-P:13200_1200~L:P:13200_1200-P:3600_6000~L:P:3600_6000-P:0_3600~L:P:8400_0-P:3600_12000~L:P:3600_12000-P:7200_13200~L:P:7200_13200-P:8400_0~L:P:0_8400-P:13200_6000~L:P:13200_6000-P:6000_10800~L:P:6000_10800-P:0_8400~L:P:4800_4800-P:6000_4800-h~L:P:6000_4800-P:6000_6000-h~L:P:6000_6000-P:4800_6000-h~L:P:4800_6000-P:4800_4800-h~L:P:6000_4800-P:7200_4800-h~L:P:7200_4800-P:7200_6000-h~L:P:7200_6000-P:6000_6000-h~L:P:6000_6000-P:6000_4800-h~L:P:7200_4800-P:8400_4800-h~L:P:8400_4800-P:8400_6000-h~L:P:8400_6000-P:7200_6000-h~L:P:7200_6000-P:7200_4800-h~L:P:6000_3600-P:7200_3600-h~L:P:7200_3600-P:7200_4800-h~L:P:7200_4800-P:6000_4800-h~L:P:6000_4800-P:6000_3600-h~L:P:6000_6000-P:7200_6000-h~L:P:7200_6000-P:7200_7200-h~L:P:7200_7200-P:6000_7200-h~L:P:6000_7200-P:6000_6000-h",
+		"GS:1200|GN:11|NM:BOSS|CD:F:P:2400_6000-P:3600_6000-P:3600_7200-P:2400_7200~F:P:10800_1200-P:12000_1200-P:12000_2400-P:10800_2400|CF:F:P:6600_10200-P:6000_9600-P:7200_9600-P:6600_10200~F:P:7200_3600-P:8400_4800-P:9600_3600-P:7200_3600|CL:L:P:0_0-P:13200_13200~L:P:13200_0-P:0_13200~L:P:0_3600-P:3600_0~L:P:3600_0-P:13200_9600~L:P:13200_9600-P:9600_13200~L:P:9600_13200-P:0_3600~L:P:0_9600-P:9600_0~L:P:9600_0-P:13200_3600~L:P:13200_3600-P:3600_13200~L:P:3600_13200-P:0_9600~L:P:3600_3600-P:9600_3600~L:P:9600_3600-P:9600_9600~L:P:9600_9600-P:3600_9600~L:P:3600_9600-P:3600_3600~L:P:2400_6000-P:3600_6000-h~L:P:3600_6000-P:3600_7200-h~L:P:3600_7200-P:2400_7200-h~L:P:2400_7200-P:2400_6000-h~L:P:10800_1200-P:12000_1200-h~L:P:12000_1200-P:12000_2400-h~L:P:12000_2400-P:10800_2400-h~L:P:10800_2400-P:10800_1200-h",
+		"GS:1200|GN:6|NM:Mob1|CD:|CF:|CL:L:P:0_0-P:7200_7200~L:P:0_3600-P:7200_3600~L:P:3600_0-P:0_6000~L:P:0_6000-P:7200_6000~L:P:7200_6000-P:3600_0~L:P:7200_0-P:0_7200",
+		"GS:1200|GN:6|NM:Mob2|CD:F:P:1200_1200-P:2400_1200-P:2400_2400-P:1200_2400~F:P:6000_4800-P:7200_4800-P:7200_6000-P:6000_6000|CF:F:P:5760_3600-P:4950_2250-P:3600_3600-P:5760_3600|CL:L:P:0_0-P:7200_7200~L:P:0_3600-P:7200_3600~L:P:3600_0-P:0_6000~L:P:0_6000-P:7200_6000~L:P:7200_6000-P:3600_0~L:P:7200_0-P:0_7200~L:P:1200_1200-P:2400_1200-h~L:P:2400_1200-P:2400_2400-h~L:P:2400_2400-P:1200_2400-h~L:P:1200_2400-P:1200_1200-h~L:P:6000_4800-P:7200_4800-h~L:P:7200_4800-P:7200_6000-h~L:P:7200_6000-P:6000_6000-h~L:P:6000_6000-P:6000_4800-h",
 	];
 
 	// クラス定義
@@ -49,8 +67,8 @@
 			this.Y = y;
 			this.hidden = false;
 		};
-		get drawX(){ return Math.round(this.X / scale) + GRID_PADDING; };
-		get drawY(){ return Math.round(this.Y / scale) + GRID_PADDING; };
+		get drawX(){ return Math.round(this.X / scale) + GRID_PADDING_L; };
+		get drawY(){ return Math.round(this.Y / scale) + GRID_PADDING_T; };
 		copy(){
 			return new Point(this.X, this.Y);
 		};
@@ -112,10 +130,51 @@
 			];
 		}
 	};
+	class TextBox extends Point {
+		constructor(x, y, text){
+			super(x, y);
+			this.text = text;
+		};
+		draw(ctx, color){
+			ctx.font = FONT_SIZE + "px " + FONT_FAMILY;
+			this.drawText(ctx, color, -GRID_PADDING_L, -GRID_PADDING_T);
+		};
+		drawText(ctx, color, padX, padY){
+			ctx.fillStyle    = color;
+			ctx.textAlign    = "center";
+			ctx.textBaseline = "top";
+			ctx.fillText(this.text, this.drawX + padX, this.drawY + padY);
+		};
+	};
+	class NameLabel extends TextBox {
+		draw(ctx, color){
+			var fsize = (scale <= SCALE_MAX ? FONT_SIZE_NL : FONT_SIZE_NS);
+			var gsize = (scale <= SCALE_MAX ? FONT_SIZE_GL : FONT_SIZE_GS);
+			var padX = 0;
+			var padY = -fsize - gsize - 2;
+			ctx.font = fsize + "px " + FONT_FAMILY;
+			this.drawText(ctx, color, padX, padY);
+		};
+	};
+	class GridLabel extends TextBox {
+		constructor(x, y, text){
+			x = x > 0 ? (x - 0.5) * GRID_SIZE : 0;
+			y = y > 0 ? (y - 0.5) * GRID_SIZE : 0;
+			super(x, y, text);
+		};
+		draw(ctx, color){
+			var size = (scale <= SCALE_MAX ? FONT_SIZE_GL : FONT_SIZE_GS);
+			var padX = (this.X > 0 ? 0 : -size + 3);
+			var padY = (this.Y > 0 ? -size / 2 - 1: -size - 1);
+			ctx.font = size + "px " + FONT_FAMILY;
+			this.drawText(ctx, color, padX, padY);
+		};
+	};
 	class BaseShape {
 		constructor(){
 			this.plist  = [];
 			this.hidden = false;
+			this.color  = "";
 		};
 		equals(obj){
 			var cnt = 0;
@@ -124,21 +183,24 @@
 					cnt++;
 				};
 			};
-			return (cnt == this.plist.length);
+			return (cnt == this.plist.length && obj.hidden == this.hidden);
+		};
+		setColor(color){
+			this.color = color;
 		};
 		serialize(tag){
 			var ret = [];
 			for(var i = 0; i < this.plist.length; i++){
 				ret.push(this.plist[i].serialize());
 			};
-			this.hidden ? ret.push("h") : "";
+			ret.push(this.hidden ? "h" : this.color);
 			return tag + ret.join("-");
 		};
 		static parsePoints(str){
 			var ret = [];
 			var ary = str.slice(2).split("-");
 			for(var i = 0; i < ary.length; i++){
-				ret.push(ary[i] == "h" ? "h" : Point.deserialize(ary[i]));
+				ret.push(ary[i].substring(0, 1) == "P" ? Point.deserialize(ary[i]) : ary[i]);
 			};
 			return ret;
 		};
@@ -158,7 +220,7 @@
 			this.hidden = (arg3 === true);
 		};
 		draw(ctx, color){
-			ctx.strokeStyle = color;
+			ctx.strokeStyle = this.color || color;
 			ctx.lineWidth = 1;
 			ctx.beginPath();
 			ctx.moveTo(this.p1.drawX, this.p1.drawY);
@@ -175,7 +237,8 @@
 		static deserialize(str){
 			var ary = BaseShape.parsePoints(str);
 			var ret = new Line(ary[0], ary[1]);
-			ret.hidden = (ary.length == 3);
+			ret.hidden = (ary[2] == "h");
+			ret.color  = (ary[2] || "");
 			return ret;
 		};
 	};
@@ -185,7 +248,7 @@
 			this.plist = ary;
 		};
 		draw(ctx, color){
-			ctx.fillStyle = color;
+			ctx.fillStyle = this.color || color;
 			ctx.beginPath();
 			ctx.moveTo(this.plist[0].drawX, this.plist[0].drawY);
 			for(var i = 1; i < this.plist.length; i++){
@@ -198,8 +261,14 @@
 			return super.serialize("F:");
 		};
 		static deserialize(str){
-			var ary = BaseShape.parsePoints(str);
-			return new Fill(ary);
+			var ary  = BaseShape.parsePoints(str);
+			var tail = ary[ary.length - 1];
+			var ret  = new Fill(ary);
+			if(!tail || (typeof tail == "string" && tail.substring(0, 1) == "#")){
+				ary.pop();
+				ret.color = (tail || "");
+			};
+			return ret;
 		};
 	};
 	class ExCanvas {
@@ -215,6 +284,14 @@
 		initialize(){
 			this.obj = [];
 		};
+		existsObject(obj){
+			for(var i = 0; i < this.obj.length; i++){
+				if(this.obj[i].equals(obj)){
+					return true;
+				};
+			};
+			return false;
+		};
 		addObject(obj){
 			this.obj.push(obj);
 		};
@@ -222,31 +299,34 @@
 			this.obj = this.obj.concat(ary);
 		};
 		delObjects(ary, cb){
-			for(var i = this.obj.length - 1; i >= 0; i--){
-				for(var j = 0; j < ary.length; j++){
-					if(this.obj[i].equals(ary[j])){
-						(cb) ? cb(this.obj, i) : this.obj.splice(i, 1);
+			for(var i = 0; i < ary.length; i++){
+				for(var j = this.obj.length - 1; j >= 0; j--){
+					if(this.obj[j].equals(ary[i])){
+						(cb) ? cb(this.obj, j) : this.obj.splice(j, 1);
 						break;
 					};
 				};
 			};
 		};
 		setScale(){
-			this.cvs.width  = GRID_PADDING * 2 + this.parent.gridMax / scale;
-			this.cvs.height = GRID_PADDING * 2 + this.parent.gridMax / scale;
+			this.cvs.width  = GRID_PADDING_L + this.parent.gridMax / scale + GRID_PADDING_E;
+			this.cvs.height = GRID_PADDING_T + this.parent.gridMax / scale + GRID_PADDING_E;
 		};
 		clear(){
 			var ctx = this.cvs.getContext("2d");
 			ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 		};
 		redraw(){
-			this.cvs.classList[(this.chk.checked ? "remove" : "add")]("hide");
+			this.cvs.classList[(!this.chk || this.chk.checked ? "remove" : "add")]("hide");
 			this.clear();
 			var ctx = this.cvs.getContext("2d");
 			for(var i = 0; i < this.obj.length; i++){
 				!(this.obj[i].hidden) ? this.obj[i].draw(ctx, this.color) : "";
 			};
 			modeman.refreshButtons(this.parent);
+		};
+		static checkDataStr(str){
+			return (!encodeURIComponent(str).match(/[^a-zA-Z0-9:\|_\-~%#]/g));
 		};
 		serialize(tag){
 			var ret = [];
@@ -273,6 +353,23 @@
 			this.obj = ExCanvas.parseObjects(str);
 		};
 	};
+	class ExCanvasName extends ExCanvas {
+		initialize(){
+			super.initialize();
+			this.defaultName = "NoName";
+			this.setName(this.Name);
+		};
+		setName(name){
+			this.Name = name || this.defaultName;
+			this.obj  = [new NameLabel(this.parent.gridMax / 2, 0, this.Name)];
+		};
+		serialize(){
+			return "NM:" + encodeURIComponent(this.Name);
+		};
+		loadData(str){
+			this.setName(decodeURIComponent(str.replace("NM:", "")));
+		};
+	};
 	class ExCanvasDamage extends ExCanvas {
 		serialize(){
 			return super.serialize("CD:");
@@ -295,6 +392,11 @@
 					0, i * GRID_SIZE,
 					this.parent.gridMax, i * GRID_SIZE
 				));
+				if(i > 0){
+					var num  = (this.parent.gridNum > 6 ? i + 1 : i);
+					super.addObject(new GridLabel(i, 0, num));
+					super.addObject(new GridLabel(0, i, num));
+				};
 			};
 		};
 	};
@@ -302,10 +404,23 @@
 		initialize(){
 			super.initialize();
 			this.points = [];
-			this.addObject(new Line(0, 0, this.parent.gridMax, this.parent.gridMax));
 		};
-		addLines(ary){
+		setDefaultLines(){
+			var p00 = new Point(0, 0);
+			var p01 = new Point(0, this.parent.gridMax);
+			var p10 = new Point(this.parent.gridMax, 0);
+			var p11 = new Point(this.parent.gridMax, this.parent.gridMax);
+			this.addLines([
+				new Line(p00, p01, true),
+				new Line(p01, p11, true),
+				new Line(p11, p10, true),
+				new Line(p10, p00, true),
+				new Line(p00, p11)
+			], true);
+		};
+		addLines(ary, checkWrap){
 			for(var i = 0; i < ary.length; i++){
+				if(checkWrap && this.existsObject(ary[i])){ continue; };
 				for(var j = 0; j < this.obj.length; j++){
 					var p = getCrossPos(ary[i], this.obj[j]);
 					if(p){
@@ -343,11 +458,15 @@
 			};
 			return ret;
 		};
+		redraw(){
+			this.setDefaultLines();
+			super.redraw();
+		};
 		serialize(){
 			return super.serialize("CL:");
 		};
 		loadData(str){
-			this.addLines(ExCanvas.parseObjects(str).slice(1));
+			this.addLines(ExCanvas.parseObjects(str));
 		};
 	};
 	class ExCanvasTemp extends ExCanvas {
@@ -465,8 +584,9 @@
 		};
 	};
 	class MagicCanvas {
-		constructor(div, gridNum, isReadOnly){
-			this.div = div;
+		constructor(name, gridNum, isReadOnly){
+			this.div = document.getElementById("div" + name);
+			this.cvsName;
 			this.cvsDamage;
 			this.cvsFill;
 			this.cvsGrid;
@@ -474,20 +594,27 @@
 			this.cvsTemp;
 			this.cvsAry;
 			this.initGrid(gridNum);
-			this.initCanvas(div, isReadOnly)
+			this.initCanvas(this.div, isReadOnly);
 		};
 		initGrid(gridNum){
 			this.gridNum = gridNum;
 			this.gridMax = GRID_SIZE * gridNum;
 		};
-		initCanvas = function(div, isReadOnly){
-			this.cvsDamage = new ExCanvasDamage(this, div, "Damage", 0, "#FFA0A0");
-			this.cvsFill   = new ExCanvasFill(  this, div, "Fill",   1, "#00C0FF");
-			this.cvsGrid   = new ExCanvasGrid(  this, div, "Grid",   2, "#808080");
-			this.cvsLine   = new ExCanvasLine(  this, div, "Line",   3, "#0000FF");
-			this.cvsTemp   = new ExCanvasTemp(  this, div, "Temp",   4, "#FF0000");
-			this.cvsAry    = [this.cvsDamage, this.cvsFill, this.cvsGrid, this.cvsLine, this.cvsTemp];
+		initCanvas(div, isReadOnly){
+			this.cvsName   = new ExCanvasName(  this, div, "Name",   0, "#000000");
+			this.cvsDamage = new ExCanvasDamage(this, div, "Damage", 1, "#FFA0A0");
+			this.cvsFill   = new ExCanvasFill(  this, div, "Fill",   2, "#00C0FF");
+			this.cvsGrid   = new ExCanvasGrid(  this, div, "Grid",   3, "#A0A0A0");
+			this.cvsLine   = new ExCanvasLine(  this, div, "Line",   4, "#0000FF");
+			this.cvsTemp   = new ExCanvasTemp(  this, div, "Temp",   5, "#FF0000");
+			this.cvsAry    = [this.cvsName, this.cvsDamage, this.cvsFill, this.cvsGrid, this.cvsLine, this.cvsTemp];
 			isReadOnly ? "" : this.cvsTemp.setEvents(this.cvsTemp);
+		};
+		getName(){
+			return this.cvsName.Name;
+		};
+		setName(name){
+			this.cvsName.setName(name);
 		};
 		show(){
 			setShow(this.div);
@@ -497,29 +624,32 @@
 		};
 		resize(gridNum){
 			this.initGrid(gridNum);
+			this.cvsName.initialize();
 			this.cvsGrid.initialize();
 			this.cvsLine.initialize();
 		};
 		setLine = function(){
-			this.cvsLine.addLines(this.cvsTemp.getLines());
+			var lines = this.cvsTemp.getLines();
+			for(var i = 0; i < lines.length; i++){
+				lines[i].setColor(modeman.getLineColor());
+			};
+			this.cvsLine.addLines(lines);
 			this.cvsLine.redraw();
 		};
 		delLine = function(){
 			this.cvsLine.delObjects(this.cvsTemp.getLines());
-			if(this.cvsLine.obj.length == 1){
-				modeman.setMode(MODE_LINE);
-			};
+			modeman.refreshButtons(this);
 			this.cvsLine.redraw();
 		};
 		setFill = function(){
-			this.cvsFill.addObject(new Fill(this.cvsTemp.getPoints()));
+			var fill = new Fill(this.cvsTemp.getPoints());
+			fill.setColor(modeman.getFillColor());
+			this.cvsFill.addObject(fill);
 			this.cvsFill.redraw();
 		};
 		delFill = function(){
 			this.cvsFill.delObjects([new Fill(this.cvsTemp.getPoints())]);
-			if(this.cvsFill.obj.length == 0){
-				modeman.setMode(MODE_LINE);
-			};
+			modeman.refreshButtons(this);
 			this.cvsFill.redraw();
 		};
 		setDamage = function(){
@@ -543,9 +673,7 @@
 			this.cvsDamage[(mode == "add" ? "addObjects" : "delObjects")](fills);
 			this.cvsLine[  (mode == "add" ? "addLines"   : "delObjects")](lines);
 
-			if(this.cvsDamage.obj.length == 0){
-				modeman.setMode(MODE_LINE);
-			};
+			modeman.refreshButtons(this);
 			this.cvsDamage.redraw();
 			this.cvsLine.redraw();
 
@@ -556,7 +684,8 @@
 				this.cvsAry[i].redraw();
 			};
 		};
-		resetAll = function(){
+		resetAll = function(gridNum){
+			this.resize(gridNum);
 			for(var i = 0; i < this.cvsAry.length; i++){
 				this.cvsAry[i].initialize();
 			};
@@ -574,6 +703,7 @@
 		serialize = function(){
 			var ret = "GS:" + GRID_SIZE + "|";
 			ret += "GN:" + this.gridNum + "|";
+			ret += this.cvsName.serialize() + "|";
 			ret += this.cvsDamage.serialize() + "|";
 			ret += this.cvsFill.serialize() + "|";
 			ret += this.cvsLine.serialize();
@@ -582,11 +712,15 @@
 		loadData = function(str, showAlert){
 			if(!(str)){ return; };
 			try{
+				if(!ExCanvas.checkDataStr(str)){
+					throw new Error("データが破損しています。\n" + str);
+				};
 				var ary = str.split("|");
 				for(var i = 0; i < ary.length; i++){
 					switch(ary[i].substring(0, 3)){
 						case "GS:": break;	//★
 						case "GN:": this.resize(Number(ary[i].replace("GN:", ""))); break;
+						case "NM:": this.cvsName.loadData(ary[i]);   break;
 						case "CD:": this.cvsDamage.loadData(ary[i]); break;
 						case "CF:": this.cvsFill.loadData(ary[i]);   break;
 						case "CL:": this.cvsLine.loadData(ary[i]);   break;
@@ -596,13 +730,16 @@
 				modeman.refreshButtons(this);
 			} catch(e) {
 				showAlert ? alert("データの読み込みに失敗しました。") : "";
-				this.resetAll();
+				console.log(e);
+				this.resetAll(this.gridNum);
 			};
 		};
 	};
 	class ModeMan {
 		constructor(){
 			this.mode = MODE_NONE;
+			this.lineColor = 0;
+			this.fillColor = 1;
 			this.initStorage();
 			this.initButtons([
 				MODE_LINE, MODE_SHAPE, MODE_FILL, MODE_DAMAGE,
@@ -613,13 +750,22 @@
 			]);
 		};
 		initStorage(){
-			this.setDefaultData(TAB_MAIN, 11);
-			this.setDefaultData(TAB_MOB1, 6);
-			this.setDefaultData(TAB_MOB2, 6);
+			if(isStandAlone){
+				this.isClean = this.setDefaultData(0, 11, "PC%20Name");
+			} else {
+				this.isClean = this.setDefaultData(TAB_MAIN, 11, this.isGM ? "BOSS" : "PC%20Name");
+				if(this.isGM){
+					this.setDefaultData(TAB_MOB1, 6, "Mob1");
+					this.setDefaultData(TAB_MOB2, 6, "Mob2");
+				};
+			};
 		};
-		setDefaultData(idx, gn){
+		setDefaultData(idx, gn, name){
 			if(!(this.readData(idx))){
-				this.saveData("GN:" + gn, idx);
+				this.saveData("GN:" + gn + "|NM:" + name, idx);
+				return true;
+			} else {
+				return false;
 			};
 		};
 		initButtons(ary){
@@ -627,11 +773,13 @@
 			for(var i = 0; i < ary.length; i++){
 				this.buttons[ary[i]] = document.getElementById("btnMode" + ary[i]);
 			};
-			this.btnSubmit = document.getElementById("btnSubmit");
-			this.btnCancel = document.getElementById("btnCancel");
-			this.btnReset  = document.getElementById("btnReset");
-			this.menuSave  = document.getElementById("menuSave");
-			this.menuRead  = document.getElementById("menuRead");
+			this.btnPalette = document.getElementById("btnPalette");
+			this.btnSubmit  = document.getElementById("btnSubmit");
+			this.btnCancel  = document.getElementById("btnCancel");
+			this.btnReset   = document.getElementById("btnReset");
+			this.menuName   = document.getElementById("menuName");
+			this.menuSave   = document.getElementById("menuSave");
+			this.menuLoad   = document.getElementById("menuLoad");
 		};
 		initTabs(ary){
 			this.tab = TAB_NONE;
@@ -648,6 +796,9 @@
 		initTab(){
 			this.setTab(this.isOP ? TAB_ALL : TAB_MAIN);
 		};
+		get defaultGridNum(){
+			return ([TAB_MOB1, TAB_MOB2].includes(this.tab) ? 6 : 11);
+		};
 		get isLineMode(){
 			return ([1, 2].includes(this.mode % 10));
 		};
@@ -660,6 +811,9 @@
 		get isDamageMode(){
 			return (this.mode % 10 == 4);
 		};
+		get isDeleteMode(){
+			return (Math.floor(this.mode / 10) == 2);
+		};
 		get isPC(){
 			return isStandAlone || this.checkFrameMode("P");
 		};
@@ -670,8 +824,7 @@
 			return !isStandAlone && this.checkFrameMode("O");
 		};
 		checkFrameMode(mode){
-			var key = this.readCanvasKey();
-			return ((key ? key.substring(0, 1) : "") == mode);
+			return ((canvasKey ? canvasKey.substring(0, 1) : "") == mode);
 		};
 		setMode(mode){
 			if(this.mode != MODE_NONE){
@@ -683,21 +836,39 @@
 				cancel();
 			};
 		};
+		getLineColor(){
+			return COLOR_PALETTE[this.lineColor];
+		};
+		setLineColor(idx){
+			this.lineColor = idx;
+			setBG(this.btnPalette, this.getLineColor());
+		};
+		getFillColor(){
+			return COLOR_PALETTE[this.fillColor];
+		};
+		setFillColor(idx){
+			this.fillColor = idx;
+			setBG(this.btnPalette, this.getFillColor());
+		};
 		refreshButtons(parent){
 			var isMain = [TAB_MAIN, TAB_MOB1, TAB_MOB2].includes(this.tab);
 			setEnable(this.buttons[MODE_LINE],    isMain);
 			setEnable(this.buttons[MODE_SHAPE],   isMain);
 			setEnable(this.buttons[MODE_DAMAGE],  isMain);
 			setEnable(this.buttons[MODE_FILL],   (isMain && parent.cvsLine.points.length >= 3));
-			setEnable(this.buttons[MODE_DEL_L],  (isMain && parent.cvsLine.obj.length > 1));
-			setEnable(this.buttons[MODE_DEL_S],  (isMain && parent.cvsLine.obj.length > 2));
+			setEnable(this.buttons[MODE_DEL_L],  (isMain && parent.cvsLine.obj.length > 5));
+			setEnable(this.buttons[MODE_DEL_S],  (isMain && parent.cvsLine.obj.length > 6));
 			setEnable(this.buttons[MODE_DEL_F],  (isMain && parent.cvsFill.obj.length > 0));
 			setEnable(this.buttons[MODE_DEL_D],  (isMain && parent.cvsDamage.obj.length > 0));
 			setEnable(this.btnSubmit, (isMain && parent.cvsTemp.isReady));
 			setEnable(this.btnCancel,  isMain);
 			setEnable(this.btnReset,   isMain);
+			setEnable(this.menuName,   isMain);
 			setEnable(this.menuSave,   isMain);
-			setEnable(this.menuRead,   isMain);
+			setEnable(this.menuLoad,   isMain);
+			if(isMain && this.mode != MODE_NONE && this.buttons[this.mode].disabled){
+				this.setMode(MODE_LINE);
+			};
 			if(!isMain){
 				this.setMode(MODE_NONE);
 			};
@@ -724,12 +895,6 @@
 				case TAB_SUB: loadSub();  break;
 			};
 		};
-		saveCanvasKey(key){
-			localStorage.setItem("floria.canvasKey", key);
-		};
-		readCanvasKey(){
-			return localStorage.getItem("floria.canvasKey");
-		};
 		saveData(data, idx){
 			localStorage.setItem(this.getDataKey(idx), data);
 		};
@@ -737,7 +902,7 @@
 			return localStorage.getItem(this.getDataKey(idx));
 		};
 		getDataKey(idx){
-			return "floria.data" + (idx || (isStandAlone ? "0" : this.tab))
+			return "floria." + (isStandAlone ? "data0" : (canvasKey + (idx || this.tab)));
 		};
 	};
 
@@ -751,43 +916,55 @@
 	var cvsAry = [];
 	var btnScaleUp;
 	var btnScaleDown;
+	var divPalette;
 	var divMenu;
 	var divHelp;
 	var divMain;
 	var divAll;
 	var divSub;
 	var selectName;
+	var canvasKey    = "";
 	var isStandAlone = true;
+	var isEnemyShow  = false;
 
 	var initialize = function(){
 		createMain();
 		createSub();
 		modeman = new ModeMan();
 		modeman.initTab();
+		initPalette();
 		initialize2();
+		modeman.isClean ? showReadme() : "";
 	};
 	var createMain = function(){
 		btnScaleUp   = document.getElementById("btnScaleUp");
 		btnScaleDown = document.getElementById("btnScaleDown");
+		divPalette   = document.getElementById("divPalette");
 		divMenu      = document.getElementById("divMenu");
 		divHelp      = document.getElementById("divHelp");
 		divMain      = document.getElementById("divMain");
 		divAll       = document.getElementById("divAll");
 		divSub       = document.getElementById("divSub");
-		cvsMain      = new MagicCanvas(divMain, 11);
+		cvsMain      = new MagicCanvas("MyPC", 11);
 	};
 	var createSub = function(){
 		cvsSubs = [
-			new MagicCanvas(document.getElementById("divSub1"), 11, true),
-			new MagicCanvas(document.getElementById("divSub2"), 11, true),
-			new MagicCanvas(document.getElementById("divSub3"), 11, true),
-			new MagicCanvas(document.getElementById("divSub4"), 11, true),
-			new MagicCanvas(document.getElementById("divBoss"), 11, true),
-			new MagicCanvas(document.getElementById("divEne1"),  6, true),
-			new MagicCanvas(document.getElementById("divEne2"),  6, true)
+			new MagicCanvas("PC1",  11, true),
+			new MagicCanvas("PC2",  11, true),
+			new MagicCanvas("PC3",  11, true),
+			new MagicCanvas("PC4",  11, true),
+			new MagicCanvas("Boss", 11, true),
+			new MagicCanvas("Mob1",  6, true),
+			new MagicCanvas("Mob2",  6, true)
 		];
-		cvsSub = new MagicCanvas(document.getElementById("divSub0"), 11, true);
+		cvsSub = new MagicCanvas("Other", 11, true);
 		selectName = document.getElementById("selectName");
+	};
+	var initPalette = function(){
+		for(var i = 0; i < COLOR_PALETTE.length; i++){
+			setBG(document.getElementById("palette" + i), COLOR_PALETTE[i]);
+		};
+		setColor(0);
 	};
 	var initialize2 = function(){};
 
@@ -798,8 +975,8 @@
 		var posY = 0;
 		var rect = event.target.getBoundingClientRect();
 
-		posX = (event.clientX - rect.left - GRID_PADDING) * scale;
-		posY = (event.clientY - rect.top  - GRID_PADDING) * scale;
+		posX = (event.clientX - rect.left - GRID_PADDING_L) * scale;
+		posY = (event.clientY - rect.top  - GRID_PADDING_T) * scale;
 
 		switch(true){
 			case modeman.isLineMode:
@@ -887,6 +1064,9 @@
 		};
 		var data = cvsActive.serialize();
 		modeman.saveData(data);
+		if(modeman.isDeleteMode){
+			cvsActive.loadData(data, true);
+		};
 		cancel();
 		putCanvasData(data);
 	};
@@ -898,40 +1078,63 @@
 	var resetAll = function(){
 		var ret = confirm("キャンバスを初期化します。\nよろしいですか？");
 		if(ret){
-			cvsActive.resetAll();
-			putCanvasData("");
+			cvsActive.resetAll(modeman.defaultGridNum);
+			submit();
 		};
 	};
-	var showMenu = function(event){
-		hideHelp();
-		if(!(document.onclick)){
-			setShow(divMenu);
-			document.onclick = hideMenu;
-			cancelEvent(event);
-		} else {
-			hideMenu();
-		}
+	var showPalette = function(event){
+		showPopup(event, divPalette);
 	};
-	var hideMenu = function(){
-		setHide(divMenu);
-		document.onclick = null;
+	var showMenu = function(event){
+		showPopup(event, divMenu);
+	};
+	var showReadme = function(event){
+		showPopup(event, divReadme);
 	};
 	var showHelp = function(event){
-		hideMenu();
-		if(!(document.onclick)){
-			setShow(divHelp);
-			document.onclick = hideHelp;
+		showPopup(event, divHelp);
+	};
+	var showPopup = function(event, div){
+		hidePopup(div);
+		if(isShow(div)){
+			setShow(div);
+			document.onclick = hidePopup;
 			cancelEvent(event);
 		} else {
-			hideHelp();
+			hidePopup();
 		}
 	};
-	var hideHelp = function(){
-		setHide(divHelp);
+	var hidePopup = function(div){
+		div !== divPalette ? setHide(divPalette) : "";
+		div !== divMenu    ? setHide(divMenu)    : "";
+		div !== divReadme  ? setHide(divReadme)  : "";
+		div !== divHelp    ? setHide(divHelp)    : "";
 		document.onclick = null;
 	};
+	var setColor = function(idx){
+		hidePopup();
+		modeman.setLineColor(idx);
+		//modeman.setFillColor(idx);
+	};
+	var setName = function(){
+		hidePopup();
+		var name  = cvsMain.getName();
+		var valid = false;
+		do {
+			name  = window.prompt("キャラクターの名前を入力してください", name);
+			valid = ExCanvas.checkDataStr(name);
+			if(!valid){
+				alert("特殊記号などの使用できない文字が含まれています。");
+			};
+		} while(!valid);
+		if(name){
+			cvsActive.setName(name);
+			redrawAll();
+			submit();
+		}
+	};
 	var downloadData = async function(){
-		hideMenu();
+		hidePopup();
 		try {
 			var data = new Blob([cvsActive.serialize()], { type : "text/plain" });
 			var url  = URL.createObjectURL(data);
@@ -940,12 +1143,12 @@
 			link.download = "CanvasData";
 			link.click();
 			URL.revokeObjectURL(url);
-		} catch(error){
-			alert(error);
+		} catch(e){
+			alert(e);
 		};
 	};
 	var uploadData = async function(){
-		hideMenu();
+		hidePopup();
 		var ret = window.confirm("現在のキャンバスに上書きしてよろしいですか？");
 		if(ret){
 			var loader = document.getElementById("uploader");
@@ -965,8 +1168,8 @@
 					putCanvasData(data);
 				};
 				reader.readAsText(file);
-			} catch(error){
-				alert(error);
+			} catch(e){
+				alert(e);
 			} finally {
 				this.value = "";
 			};
@@ -982,7 +1185,7 @@
 		hideContents();
 		cvsAry    = [cvsMain];
 		cvsActive = cvsMain;
-		cvsActive.loadData(modeman.readData());
+		cvsActive.loadData(modeman.readData(), true);
 		resetScale();
 		modeman.setMode(MODE_LINE);
 		setShow(divMain);
@@ -995,7 +1198,7 @@
 			canvasData[1] = modeman.readData(0);
 		};
 		for(var i = 0; i < cvsSubs.length; i++){
-			cvsSubs[i].loadData(canvasData[i+1], false);
+			cvsSubs[i].loadData(canvasData[i+1]);
 		};
 		resetScale(SCALE_MAX * 2);
 		setShow(divAll);
@@ -1018,13 +1221,14 @@
 		hideContents();
 		cvsAry    = [cvsSub];
 		cvsActive = cvsSub;
+		cvsActive.setName("");
 		switch(true){
 			case (selectName.selectedIndex == 0):
-				clearAll();
+				cvsActive.loadData("GN:11|NM:%20");
 				redrawAll();
 				break;
 			case (selectName.selectedIndex == 1 && isStandAlone):
-				cvsActive.loadData(modeman.readData(0));
+				cvsActive.loadData(modeman.readData(0), true);
 				break;
 			default:
 				loadSub();
@@ -1044,18 +1248,32 @@
 	var setHide = function(obj){
 		obj.classList.add("hide");
 	};
+	var isShow = function(obj){
+		return (obj.classList.contains("hide"));
+	};
+	var setBG = function(obj, color){
+		obj.style.background = color;
+	};
 	var toggleActive = function(obj){
 		obj.classList.toggle("active");
 	};
 	var cancelEvent = function(event){
-		event.stopPropagation();
+		event ? event.stopPropagation() : "";
 	};
 
 </script>
+<script language="JavaScript" src="./js/jquery-3.7.1.min.js"></script>
 <style>
+	div {
+		user-select: none;
+	}
 	td {
-		padding   : 0px 20px;
-		text-align: center;
+		padding    : 0px 20px;
+		text-align : center;
+		user-select: none;
+	}
+	td.modeButtons {
+		text-align: left;
 	}
 	input {
 		border-width : 1px;
@@ -1074,7 +1292,7 @@
 	}
 	.head {
 		position: fixed;
-		z-index : 8;
+		z-index : 10;
 	}
 	.control {
 		background: #FFFFFF;
@@ -1101,37 +1319,34 @@
 		position: absolute;
 		top     : 102px;
 	}
+	.main {
+		position: absolute;
+		top     : 10px;
+	}
 	.sub {
 		position: absolute;
 		width   : 387px;
 		height  : 10px;
 		cursor  : pointer;
 	}
-	.name {
-		position : absolute;
-		top      : 50%;
-		left     : 50%;
-		transform: translate(-50%,-50%);
-		font-size: 22px;
-	}
 	.sub1 {
-		top :  20px;
+		top :   0px;
 		left:   0px;
 	}
 	.sub2 {
-		top :  20px;
+		top :   0px;
 		left: 380px;
 	}
 	.sub3 {
-		top : 405px;
+		top : 390px;
 		left:   0px;
 	}
 	.sub4 {
-		top : 405px;
+		top : 390px;
 		left: 380px;
 	}
 	.boss {
-		top :  20px;
+		top :   0px;
 		left: 810px;
 	}
 	.ene {
@@ -1141,11 +1356,11 @@
 		cursor  : pointer;
 	}
 	.ene1 {
-		top :  405px;
+		top :  390px;
 		left:  780px;
 	}
 	.ene2 {
-		top :  405px;
+		top :  390px;
 		left: 1000px;
 	}
 	.selectName {
@@ -1153,21 +1368,52 @@
 		top      :  8px;
 		left     : 20px;
 		font-size: 18px;
-		z-index  : 10;
+		z-index  : 8;
 		cursor   : pointer;
 	}
 	.sub0 {
 		position: absolute;
-		top     : 20px;
+		top     : 10px;
 	}
-	.menu {
+	.sync {
+		width: 60px;
+		color: #CCCCCC;
+	}
+	.syncEnable {
+		color     : #FFFFFF;
+		background: #00A0FF;
+	}
+	.syncDisable {
+		color     : #FFFFFF;
+		background: #FF0000;
+	}
+	.popup {
 		position     : absolute;
-		top          : 60px;
-		left         : 700px;
-		z-index      : 10;
+		z-index      : 1;
 		background   : #FFFFFF;
 		border       : 1px solid #000000;
 		border-radius: 3px;
+	}
+	.btnPalette {
+		border       : 3px solid #CCCCCC;
+		border-radius: 6px;
+	}
+	.palette {
+		top    : 38px;
+		left   : 450px;
+		padding: 6px 6px;
+	}
+	.paletteItem {
+		width        : 20px;
+		margin       : 2px 2px;
+		border       : none;
+		border-radius: 0px;
+		cursor       : pointer;
+		user-select  : none;
+	}
+	.menu {
+		top : 68px;
+		left: 690px;
 	}
 	.menuItem {
 		width        : 100%;
@@ -1183,15 +1429,29 @@
 		color     : #FFFFFF;
 		background: #00A0FF;
 	}
-	.help {
+	.popupInfo {
 		position     : absolute;
-		top          : 60px;
-		left         : 200px;
-		z-index      : 10;
+		z-index      : 1;
 		padding      : 6px 12px;
-		background   : #E0E0E0;
-		border       : 1px solid #000000;
-		border-radius: 3px;
+		background   : #AAFFCC;
+		border       : 3px solid #008040;
+		border-radius: 8px;
+	}
+	.closeButton {
+		float    : right;
+		font-size: 10px;
+	}
+	.readme {
+		top  : 30px;
+		left : 50px;
+		width: 640px;
+	}
+	.copyright {
+		font-size: 12px;
+	}
+	.help {
+		top : 68px;
+		left: 220px;
 	}
 	.label {
 		vertical-align: middle;
@@ -1222,14 +1482,14 @@
 						<input id="chkFill"   type="checkbox" checked="true" onclick="redrawAll()" /><label for="chkFill">塗</label>
 						<br>
 						<input id="chkDamage" type="checkbox" checked="true" onclick="redrawAll()" /><label for="chkDamage">ダメージ</label>
-						<input id="chkTemp"   type="checkbox" checked="true" onclick="redrawAll()" class="hide" />
 					</td>
-					<td>
+					<td class="modeButtons">
 						<span class="label">描画 :</span>
 						<input id="btnMode11" type="button" value="／" onclick="modeman.setMode(11)" title="直線" />
 						<input id="btnMode12" type="button" value="☆" onclick="modeman.setMode(12)" title="多角形" />
 						<input id="btnMode13" type="button" value="★" onclick="modeman.setMode(13)" title="塗潰し" />
 						<input id="btnMode14" type="button" value="■" onclick="modeman.setMode(14)" title="ダメージ塗り" />
+						<input id="btnPalette" hidden />
 						<br>
 						<span class="label">削除 :</span>
 						<input id="btnMode21" type="button" value="／" onclick="modeman.setMode(21)" title="直線削除" />
@@ -1243,22 +1503,58 @@
 						<input id="btnReset"  type="button" value="初期化"     onclick="resetAll()" />
 					</td>
 					<td>
-						<input id="btnMenu" type="button" value="≡" onclick="showMenu(event)" title="メニュー" />
-						<input id="btnHelp" type="button" value="？" onclick="showHelp(event)" title="ヘルプ" />
+						<input id="btnSync" type="button" value="同期無" onclick="startSync()" class="sync" disabled /><br>
+						<input id="btnMenu" type="button" value="≡"     onclick="showMenu(event)" title="メニュー" />
+						<input id="btnHelp" type="button" value="？"     onclick="showHelp(event)" title="ヘルプ" />
 					</td>
 				</tr>
 			</table>
-			<div id="divMenu" class="menu hide" onclick="cancelEvent(event)">
+			<div id="divPalette" class="popup palette hide" onclick="cancelEvent(event)">
+				<input id="palette0" class="paletteItem" type="button" value="" onclick="setColor(0)" />
+				<input id="palette1" class="paletteItem" type="button" value="" onclick="setColor(1)" />
+				<input id="palette2" class="paletteItem" type="button" value="" onclick="setColor(2)" />
+				<input id="palette3" class="paletteItem" type="button" value="" onclick="setColor(3)" />
+				<br>
+				<input id="palette4" class="paletteItem" type="button" value="" onclick="setColor(4)" />
+				<input id="palette5" class="paletteItem" type="button" value="" onclick="setColor(5)" />
+				<input id="palette6" class="paletteItem" type="button" value="" onclick="setColor(6)" />
+				<input id="palette7" class="paletteItem" type="button" value="" onclick="setColor(7)" />
+			</div>
+			<div id="divMenu" class="popup menu hide" onclick="cancelEvent(event)">
+				<input id="menuName" class="menuItem" type="button" value="名前変更"   onclick="setName()" />
 				<input id="menuSave" class="menuItem" type="button" value="データ保存" onclick="downloadData()" />
-				<input id="menuRead" class="menuItem" type="button" value="データ読込" onclick="uploadData()" />
+				<input id="menuLoad" class="menuItem" type="button" value="データ読込" onclick="uploadData()" />
 				<input id="uploader" type="file" class="hide" />
 				<div id="divGMMenu">
-					<input type="button" class="menuItem" value="敵情報公開" onclick="setEnemyVisible()" />
-					<input type="button" class="menuItem" value="部屋削除"   onclick="deleteRoom()" />
+					<input id="menuEnemy"  class="menuItem" type="button" value="敵情報公開" onclick="setEnemyVisible()" />
+					<input id="menuDelete" class="menuItem" type="button" value="部屋削除"   onclick="deleteRoom()" />
 				</div>
+				<input id="menuReadme" class="menuItem" type="button" value="Readme" onclick="showReadme(event)" />
 			</div>
-			<div id = "divHelp" class="help hide" onclick="cancelEvent(event)">
-				■操作方法■<br>
+			<div id = "divReadme" class="popupInfo readme hide" onclick="cancelEvent(event)">
+				★ご利用上の注意★
+				<input type="button" class="closeButton" value="×" onclick="hidePopup()"/><br>
+				<br>
+				■ツールの動作について<br>
+				　まだまだ開発途上ですので、バグが潜んでいる可能性があります。<br>
+				　動きがおかしくなったと思った時は、ページの再読込をしてみてください。<br>
+				<br>
+				■データについて<br>
+				　データはブラウザに保存されますが、CookieやWebStorageの設定が<br>
+				　有効になっている必要があります。<br>
+				　そのため、ブラウザのキャッシュクリアなどをすると消えます。<br>
+				　また、今後のバージョンアップの際に消えることがあるかもしれません。<br>
+				　永続的に保存されるものではないことをご了承ください。<br>
+				<br>
+				ご意見、ご要望、バグ報告などありましたら、<br>
+				作者の<a href="https://x.com/Nuts_ABCd" target="_blank">X(旧Twitter)アカウント</a>までお知らせいただけると幸いです。<br>
+				GitHubは<a href="https://github.com/Nuts-ABCd/floria_canvas" target="_blank">こちら</a>。<br><br>
+				<hr>
+				<span class="copyright">本ツールは、「猫憑／六畳間幻想空間」様が権利を有する『翠緑のフローリア』の二次創作物です。</span>
+			</div>
+			<div id = "divHelp" class="popupInfo help hide" onclick="cancelEvent(event)">
+				■操作方法■
+				<input type="button" class="closeButton" value="×" onclick="hidePopup()"/><br>
 				①モードを選ぶ。<br>
 				②左クリックで対象を指定する。<br>
 				　直線　　：2点を指定する。<br>
@@ -1275,15 +1571,17 @@
 				<span id="tabMode99" class="tabButton" onclick="modeman.setTab(99)">個別</span>
 			</div>
 		</div>
-		<div id="divMain" class="content hide"></div>
+		<div id="divMain" class="content hide">
+			<div id="divMyPC" class="main"></div>
+		</div>
 		<div id="divAll"  class="content hide">
-			<div id="divSub1" class="sub sub1" onclick="modeman.setTab(99, 1)"><span class="name">PC1</span></div>
-			<div id="divSub2" class="sub sub2" onclick="modeman.setTab(99, 2)"><span class="name">PC2</span></div>
-			<div id="divSub3" class="sub sub3" onclick="modeman.setTab(99, 3)"><span class="name">PC3</span></div>
-			<div id="divSub4" class="sub sub4" onclick="modeman.setTab(99, 4)"><span class="name">PC4</span></div>
-			<div id="divBoss" class="sub boss" onclick="modeman.setTab(99, 5)"><span class="name">BOSS</span></div>
-			<div id="divEne1" class="ene ene1" onclick="modeman.setTab(99, 6)"><span class="name">お供1</span></div>
-			<div id="divEne2" class="ene ene2" onclick="modeman.setTab(99, 7)"><span class="name">お供2</span></div>
+			<div id="divPC1"  class="sub sub1" onclick="modeman.setTab(99, 1)"></div>
+			<div id="divPC2"  class="sub sub2" onclick="modeman.setTab(99, 2)"></div>
+			<div id="divPC3"  class="sub sub3" onclick="modeman.setTab(99, 3)"></div>
+			<div id="divPC4"  class="sub sub4" onclick="modeman.setTab(99, 4)"></div>
+			<div id="divBoss" class="sub boss" onclick="modeman.setTab(99, 5)"></div>
+			<div id="divMob1" class="ene ene1" onclick="modeman.setTab(99, 6)"></div>
+			<div id="divMob2" class="ene ene2" onclick="modeman.setTab(99, 7)"></div>
 		</div>
 		<div id="divSub" class="content hide">
 			<select id="selectName" class="selectName" onchange="changeName()">
@@ -1296,7 +1594,7 @@
 				<option>お供1</option>
 				<option>お供2</option>
 			</select>
-			<div id="divSub0" class="sub0"></div>
+			<div id="divOther" class="sub0"></div>
 		</div>
 	</div>
 </body>
