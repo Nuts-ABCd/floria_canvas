@@ -79,6 +79,14 @@
 			ctx.closePath();
 			ctx.fill();
 		};
+		tryShift(dx, dy, max){
+			return 0 <= this.X + dx && this.X + dx <= max
+				&& 0 <= this.Y + dy && this.Y + dy <= max;
+		};
+		shift(dx, dy){
+			this.X += dx;
+			this.Y += dy;
+		};
 		equals(p){
 			return (this.X == p.X && this.Y == p.Y);
 		};
@@ -108,6 +116,7 @@
 			this.p01 = new Point(this.X, this.Y + GRID_SIZE);
 			this.p10 = new Point(this.X + GRID_SIZE, this.Y);
 			this.p11 = new Point(this.X + GRID_SIZE, this.Y + GRID_SIZE);
+			this.plist = [this.p00, this.p10, this.p11, this.p01];
 		};
 		draw(ctx, color){
 			if(this.isInArea){
@@ -115,11 +124,23 @@
 				this.getFill().draw(ctx, color);
 			};
 		};
+		tryShift(dx, dy, max){
+			return 0 <= this.p00.X + dx && this.p10.X + dx <= max
+				&& 0 <= this.p00.Y + dy && this.p01.Y + dy <= max;
+		};
+		shift(dx, dy){
+			this.X += dx;
+			this.Y += dy;
+			for(var i = 0; i < this.plist.length; i++){
+				this.plist[i].shift(dx, dy);
+			};
+		};
 		get isInArea(){
-			return (0 <= this.X && this.X < cvsActive.gridMax && 0 <= this.Y && this.Y < cvsActive.gridMax);
+			if (this.X < 0 || this.Y < 0){ return false; }
+			return (!cvsActive) || (this.X < cvsActive.gridMax && this.Y < cvsActive.gridMax);
 		};
 		getFill(){
-			return new Fill([this.p00, this.p10, this.p11, this.p01]);
+			return new Fill(this.plist);
 		};
 		getLines(){
 			return [
@@ -129,6 +150,13 @@
 				new Line(this.p01, this.p00, true)
 			];
 		}
+		serialize(){
+			return "S:" + this.X + "_" + this.Y;
+		};
+		static deserialize(str){
+			var ary = str.slice(2).split("_");
+			return new SqrPoint(Number(ary[0]), Number(ary[1]));
+		};
 	};
 	class TextBox extends Point {
 		constructor(x, y, text){
@@ -176,6 +204,11 @@
 			this.hidden = false;
 			this.color  = "";
 		};
+		shift(dx, dy){
+			for(var i = 0; i < this.plist.length; i++){
+				this.plist[i].shift(dx, dy);
+			};
+		}
 		equals(obj){
 			var cnt = 0;
 			for(var i = 0; i < this.plist.length; i++){
@@ -272,12 +305,14 @@
 		};
 	};
 	class ExCanvas {
-		constructor(parent, div, name, z, color){
+		constructor(parent, div, name, z, color, isReadOnly){
 			this.parent = parent;
 			this.cvs    = document.createElement("canvas");
 			this.cvs.style["z-index"] = z;
 			this.color  = color;
+			this.alpha  = 1.0;
 			this.chk    = document.getElementById("chk" + name);
+			this.isReadOnly = isReadOnly;
 			div.appendChild(this.cvs);
 			this.initialize();
 		};
@@ -320,6 +355,7 @@
 			this.cvs.classList[(!this.chk || this.chk.checked ? "remove" : "add")]("hide");
 			this.clear();
 			var ctx = this.cvs.getContext("2d");
+			ctx.globalAlpha = this.alpha;
 			for(var i = 0; i < this.obj.length; i++){
 				!(this.obj[i].hidden) ? this.obj[i].draw(ctx, this.color) : "";
 			};
@@ -341,9 +377,10 @@
 			for(var i = 0; i < ary.length; i++){
 				var obj;
 				switch(ary[i].substring(0, 2)){
-					case "P:": obj = Point.deserialize(ary[i]); break;
-					case "L:": obj = Line.deserialize(ary[i]);  break;
-					case "F:": obj = Fill.deserialize(ary[i]);  break;
+					case "P:": obj = Point.deserialize(ary[i]);    break;
+					case "S:": obj = SqrPoint.deserialize(ary[i]); break;
+					case "L:": obj = Line.deserialize(ary[i]);     break;
+					case "F:": obj = Fill.deserialize(ary[i]);     break;
 				};
 				(obj) ? ret.push(obj) : "";
 			};
@@ -472,42 +509,65 @@
 	class ExCanvasTemp extends ExCanvas {
 		initialize(){
 			super.initialize();
-			this.isReadOnly = false;
 			this.isComplete = false;
 			this.points = [];
 			this.lines  = [];
+			this.pstack = [];
+			this.lstack = [];
 		};
 		get isReady(){
 			return this.isComplete || (modeman.isDamageMode && this.points.length > 1);
 		};
 		getPoints(){
-			return this.points;
+			return this.pstack.flat().concat(this.points);
 		};
 		getLines(){
-			return this.lines;
+			return this.lstack.flat().concat(this.lines);
+		};
+		setObjects(){
+			var p = this.getPoints().slice(0, -1);
+			var l = this.isComplete ? this.getLines() : this.getLines().slice(0, -1);
+			this.obj = p.concat(l);
 		};
 		addLine(){
 			if(modeman.isDamageMode){ return; };
 			var len = this.points.length;
 			this.lines.push(new Line(this.points[len - 2], this.points[len - 1]));
 		};
+		shift(dx, dy){
+			var points = this.getPoints();
+			var len = points.length - 1;
+			for(var i = 0; i < len; i++){
+				if(!points[i].tryShift(dx, dy, GRID_SIZE * this.parent.gridNum)){
+					return;
+				};
+			};
+			for(var i = 0; i < len; i++){
+				points[i].shift(dx * GRID_SIZE, dy * GRID_SIZE);
+			};
+			this.redraw();
+		};
 		redraw(){
-			this.obj = this.points.concat(this.lines);
+			this.alpha = modeman.isDamageMode ? 0.5 : 1.0;
+			if(!this.isReadOnly){
+				this.obj = [];
+				this.obj = this.obj.concat(this.getPoints());
+				this.obj = this.obj.concat(this.getLines());
+			};
 			super.redraw();
 		};
+		serialize(){
+			this.setObjects();
+			return super.serialize("CT:");
+		};
 		mouseMove(event){
-
-			if(this.isComplete){ return; }
 			this.points.pop();
 			this.points.push(getMousePos(event));
-
 			if(this.points.length >= 2){
 				this.lines.pop();
 				this.addLine();
 			};
-
 			this.redraw();
-
 		};
 		mouseOut(event){
 			if(this.isComplete){ return; }
@@ -518,24 +578,26 @@
 			};
 		};
 		mouseUp(event){
+			var isRefresh;
 			switch(event.button){
-				case 0: this.addPoint(event);    break;
-				case 2: this.removePoint(event); break;
+				case 0: isRefresh = this.addPoint(event);    break;
+				case 2: isRefresh = this.removePoint(event); break;
 			};
+			isRefresh ? this.parent.putData() : "";
+			this.redraw();
 		};
 		addPoint(event){
-
+			if(this.isComplete){ this.isComplete = false; };
 			var pos = getMousePos(event);
 			var len = this.points.length;
 
 			switch(true){
 				case modeman.isLineMode:
 				case modeman.isFillMode:
-					if(this.isComplete){ return; }
 					if(len >= 2){
 						if(pos.equals(this.points[0])){
 							if(modeman.isSingleLineMode){
-								return;
+								return false;
 							} else {
 								this.isComplete = true;
 							};
@@ -553,10 +615,10 @@
 					};
 					break;
 				case modeman.isDamageMode:
-					if(!this.points[len - 1].isInArea){ return; };
+					if(!this.points[len - 1].isInArea){ return false; };
 					for(var i = 0; i < len - 1; i++){
 						if(this.points[i].equals(pos)){
-							return;
+							return false;
 						};
 					};
 					break;
@@ -564,18 +626,27 @@
 
 			if(!this.isComplete){
 				this.points.push(pos);
+			} else {
+				this.pstack.push(this.points);
+				this.points = [pos];
+				this.lstack.push(this.lines);
+				this.lines = [];
 			};
-			this.redraw();
-
+			return true;
 		};
 		removePoint(event){
 			if(this.isComplete){
 				this.isComplete = false;
+				this.points = this.pstack.pop();
+				this.lines  = this.lstack.pop();
 			} else {
 				this.points.pop();
 				this.lines.pop();
+				if(this.points.length <= 1 && this.pstack.length > 0){
+					this.isComplete = true;
+				}
 			}
-			modeman.refreshButtons(this.parent);
+			return (this.points.length > 0);
 		};
 		setEvents(self){
 			this.cvs.addEventListener("mousemove", function(event){ self.mouseMove(event); }, false);
@@ -593,6 +664,7 @@
 			this.cvsLine;
 			this.cvsTemp;
 			this.cvsAry;
+			this.waitPut = false;
 			this.initGrid(gridNum);
 			this.initCanvas(this.div, isReadOnly);
 		};
@@ -601,12 +673,12 @@
 			this.gridMax = GRID_SIZE * gridNum;
 		};
 		initCanvas(div, isReadOnly){
-			this.cvsName   = new ExCanvasName(  this, div, "Name",   0, "#000000");
-			this.cvsDamage = new ExCanvasDamage(this, div, "Damage", 1, "#FFA0A0");
-			this.cvsFill   = new ExCanvasFill(  this, div, "Fill",   2, "#00C0FF");
-			this.cvsGrid   = new ExCanvasGrid(  this, div, "Grid",   3, "#A0A0A0");
-			this.cvsLine   = new ExCanvasLine(  this, div, "Line",   4, "#0000FF");
-			this.cvsTemp   = new ExCanvasTemp(  this, div, "Temp",   5, "#FF0000");
+			this.cvsName   = new ExCanvasName(  this, div, "Name",   0, "#000000", isReadOnly);
+			this.cvsDamage = new ExCanvasDamage(this, div, "Damage", 1, "#FFA0A0", isReadOnly);
+			this.cvsFill   = new ExCanvasFill(  this, div, "Fill",   2, "#00C0FF", isReadOnly);
+			this.cvsGrid   = new ExCanvasGrid(  this, div, "Grid",   3, "#A0A0A0", isReadOnly);
+			this.cvsLine   = new ExCanvasLine(  this, div, "Line",   4, "#0000FF", isReadOnly);
+			this.cvsTemp   = new ExCanvasTemp(  this, div, "Temp",   5, "#FF0000", isReadOnly);
 			this.cvsAry    = [this.cvsName, this.cvsDamage, this.cvsFill, this.cvsGrid, this.cvsLine, this.cvsTemp];
 			isReadOnly ? "" : this.cvsTemp.setEvents(this.cvsTemp);
 		};
@@ -642,7 +714,7 @@
 			this.cvsLine.redraw();
 		};
 		setFill = function(){
-			var fill = new Fill(this.cvsTemp.getPoints());
+			var fill = new Fill(this.cvsTemp.getPoints().slice(0, -1));
 			fill.setColor(modeman.getFillColor());
 			this.cvsFill.addObject(fill);
 			this.cvsFill.redraw();
@@ -700,10 +772,11 @@
 				this.cvsAry[i].clear();
 			};
 		};
-		serialize = function(){
+		serialize = function(includeTemp = false){
 			var ret = "GS:" + GRID_SIZE + "|";
 			ret += "GN:" + this.gridNum + "|";
 			ret += this.cvsName.serialize() + "|";
+			ret += includeTemp ? (this.cvsTemp.serialize() + "|") : "";
 			ret += this.cvsDamage.serialize() + "|";
 			ret += this.cvsFill.serialize() + "|";
 			ret += this.cvsLine.serialize();
@@ -721,6 +794,7 @@
 						case "GS:": break;	//★
 						case "GN:": this.resize(Number(ary[i].replace("GN:", ""))); break;
 						case "NM:": this.cvsName.loadData(ary[i]);   break;
+						case "CT:": this.cvsTemp.loadData(ary[i]);   break;
 						case "CD:": this.cvsDamage.loadData(ary[i]); break;
 						case "CF:": this.cvsFill.loadData(ary[i]);   break;
 						case "CL:": this.cvsLine.loadData(ary[i]);   break;
@@ -732,6 +806,16 @@
 				showAlert ? alert("データの読み込みに失敗しました。") : "";
 				console.log(e);
 				this.resetAll(this.gridNum);
+			};
+		};
+		putData(){
+			var self = this;
+			if(!self.waitPut){
+				self.waitPut = true;
+				setTimeout(function(){
+					self.waitPut = false;
+					putCanvasData(self.serialize(true));
+				}, 500);
 			};
 		};
 	};
@@ -776,10 +860,13 @@
 			this.btnPalette = document.getElementById("btnPalette");
 			this.btnSubmit  = document.getElementById("btnSubmit");
 			this.btnCancel  = document.getElementById("btnCancel");
-			this.btnReset   = document.getElementById("btnReset");
-			this.menuName   = document.getElementById("menuName");
-			this.menuSave   = document.getElementById("menuSave");
-			this.menuLoad   = document.getElementById("menuLoad");
+			this.btnShiftLeft  = document.getElementById("btnShiftLeft");
+			this.btnShiftUp    = document.getElementById("btnShiftUp");
+			this.btnShiftDown  = document.getElementById("btnShiftDown");
+			this.btnShiftRight = document.getElementById("btnShiftRight");
+			this.menuName = document.getElementById("menuName");
+			this.menuSave = document.getElementById("menuSave");
+			this.menuLoad = document.getElementById("menuLoad");
 		};
 		initTabs(ary){
 			this.tab = TAB_NONE;
@@ -813,6 +900,13 @@
 		};
 		get isDeleteMode(){
 			return (Math.floor(this.mode / 10) == 2);
+		};
+		get enableShift(){
+			return (
+				this.mode == MODE_LINE ||
+				this.mode == MODE_SHAPE ||
+				this.mode == MODE_DAMAGE
+			);
 		};
 		get isPC(){
 			return isStandAlone || this.checkFrameMode("P");
@@ -862,10 +956,13 @@
 			setEnable(this.buttons[MODE_DEL_D],  (isMain && parent.cvsDamage.obj.length > 0));
 			setEnable(this.btnSubmit, (isMain && parent.cvsTemp.isReady));
 			setEnable(this.btnCancel,  isMain);
-			setEnable(this.btnReset,   isMain);
-			setEnable(this.menuName,   isMain);
-			setEnable(this.menuSave,   isMain);
-			setEnable(this.menuLoad,   isMain);
+			setEnable(this.btnShiftLeft,  isMain && this.enableShift);
+			setEnable(this.btnShiftUp,    isMain && this.enableShift);
+			setEnable(this.btnShiftDown,  isMain && this.enableShift);
+			setEnable(this.btnShiftRight, isMain && this.enableShift);
+			setEnable(this.menuName, isMain);
+			setEnable(this.menuSave, isMain);
+			setEnable(this.menuLoad, isMain);
 			if(isMain && this.mode != MODE_NONE && this.buttons[this.mode].disabled){
 				this.setMode(MODE_LINE);
 			};
@@ -977,6 +1074,7 @@
 
 		posX = (event.clientX - rect.left - GRID_PADDING_L) * scale;
 		posY = (event.clientY - rect.top  - GRID_PADDING_T) * scale;
+		posY = posY < 0 ? 0 : posY;
 
 		switch(true){
 			case modeman.isLineMode:
@@ -1074,14 +1172,21 @@
 	var cancel = function(){
 		cvsActive.cvsTemp.initialize();
 		cvsActive.cvsTemp.redraw();
+		cvsActive.putData();
 	};
 	var resetAll = function(){
+		hidePopup();
 		var ret = confirm("キャンバスを初期化します。\nよろしいですか？");
 		if(ret){
 			cvsActive.resetAll(modeman.defaultGridNum);
 			submit();
 		};
 	};
+	var shiftCanvas = function(dx, dy){
+		cvsActive.cvsTemp.shift(dx, dy);
+		cvsActive.putData();
+	};
+
 	var showPalette = function(event){
 		showPopup(event, divPalette);
 	};
@@ -1263,12 +1368,14 @@
 
 </script>
 <script language="JavaScript" src="./js/jquery-3.7.1.min.js"></script>
+<script language="JavaScript" src="./js/net.js?v1.0.1"></script>
+<script language="JavaScript" src="./js/sync.js?v1.0.1"></script>
 <style>
 	div {
 		user-select: none;
 	}
 	td {
-		padding    : 0px 20px;
+		padding    : 0px 15px;
 		text-align : center;
 		user-select: none;
 	}
@@ -1413,7 +1520,7 @@
 	}
 	.menu {
 		top : 68px;
-		left: 690px;
+		left: 603px;
 	}
 	.menuItem {
 		width        : 100%;
@@ -1482,6 +1589,7 @@
 						<input id="chkFill"   type="checkbox" checked="true" onclick="redrawAll()" /><label for="chkFill">塗</label>
 						<br>
 						<input id="chkDamage" type="checkbox" checked="true" onclick="redrawAll()" /><label for="chkDamage">ダメージ</label>
+						<input id="chkTemp"   type="checkbox" checked="true" hidden />
 					</td>
 					<td class="modeButtons">
 						<span class="label">描画 :</span>
@@ -1500,7 +1608,11 @@
 					<td>
 						<input id="btnSubmit" type="button" value="決定"       onclick="submit()" />
 						<input id="btnCancel" type="button" value="キャンセル" onclick="cancel()" />
-						<input id="btnReset"  type="button" value="初期化"     onclick="resetAll()" />
+						<br>
+						<input id="btnShiftLeft"  type="button" value="←" onclick="shiftCanvas(-1,  0)" />
+						<input id="btnShiftUp"    type="button" value="↑" onclick="shiftCanvas( 0, -1)" />
+						<input id="btnShiftDown"  type="button" value="↓" onclick="shiftCanvas( 0,  1)" />
+						<input id="btnShiftRight" type="button" value="→" onclick="shiftCanvas( 1,  0)" />
 					</td>
 					<td>
 						<input id="btnSync" type="button" value="同期無" onclick="startSync()" class="sync" disabled /><br>
@@ -1521,17 +1633,18 @@
 				<input id="palette7" class="paletteItem" type="button" value="" onclick="setColor(7)" />
 			</div>
 			<div id="divMenu" class="popup menu hide" onclick="cancelEvent(event)">
-				<input id="menuName" class="menuItem" type="button" value="名前変更"   onclick="setName()" />
-				<input id="menuSave" class="menuItem" type="button" value="データ保存" onclick="downloadData()" />
-				<input id="menuLoad" class="menuItem" type="button" value="データ読込" onclick="uploadData()" />
-				<input id="uploader" type="file" class="hide" />
+				<input id="menuName"  class="menuItem" type="button" value="名前変更"   onclick="setName()" />
+				<input id="menuSave"  class="menuItem" type="button" value="データ保存" onclick="downloadData()" />
+				<input id="menuLoad"  class="menuItem" type="button" value="データ読込" onclick="uploadData()" />
+				<input id="menuReset" class="menuItem" type="button" value="初期化"     onclick="resetAll()" />
+				<input id="uploader"  class="hide"     type="file" />
 				<div id="divGMMenu">
 					<input id="menuEnemy"  class="menuItem" type="button" value="敵情報公開" onclick="setEnemyVisible()" />
 					<input id="menuDelete" class="menuItem" type="button" value="部屋削除"   onclick="deleteRoom()" />
 				</div>
 				<input id="menuReadme" class="menuItem" type="button" value="Readme" onclick="showReadme(event)" />
 			</div>
-			<div id = "divReadme" class="popupInfo readme hide" onclick="cancelEvent(event)">
+			<div id="divReadme" class="popupInfo readme hide" onclick="cancelEvent(event)">
 				★ご利用上の注意★
 				<input type="button" class="closeButton" value="×" onclick="hidePopup()"/><br>
 				<br>
@@ -1552,7 +1665,7 @@
 				<hr>
 				<span class="copyright">本ツールは、「猫憑／六畳間幻想空間」様が権利を有する『翠緑のフローリア』の二次創作物です。</span>
 			</div>
-			<div id = "divHelp" class="popupInfo help hide" onclick="cancelEvent(event)">
+			<div id="divHelp" class="popupInfo help hide" onclick="cancelEvent(event)">
 				■操作方法■
 				<input type="button" class="closeButton" value="×" onclick="hidePopup()"/><br>
 				①モードを選ぶ。<br>
