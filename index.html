@@ -67,13 +67,22 @@
 			this.Y = y;
 			this.hidden = false;
 		};
+		get gridX(){ return this.X / GRID_SIZE; };
+		set gridX(value){ this.X = value * GRID_SIZE; };
+		get gridY(){ return this.Y / GRID_SIZE; };
+		set gridY(value){ this.Y = value * GRID_SIZE; };
 		get drawX(){ return Math.round(this.X / scale) + GRID_PADDING_L; };
 		get drawY(){ return Math.round(this.Y / scale) + GRID_PADDING_T; };
 		copy(){
 			return new Point(this.X, this.Y);
 		};
+		moveTo(p){
+			this.X = p.X;
+			this.Y = p.Y;
+		};
 		draw(ctx, color){
 			ctx.fillStyle = color;
+			ctx.globalAlpha = 1.0;
 			ctx.beginPath();
 			ctx.arc(this.drawX, this.drawY, POINT_SIZE, 0, 2 * Math.PI);
 			ctx.closePath();
@@ -117,6 +126,11 @@
 			this.p10 = new Point(this.X + GRID_SIZE, this.Y);
 			this.p11 = new Point(this.X + GRID_SIZE, this.Y + GRID_SIZE);
 			this.plist = [this.p00, this.p10, this.p11, this.p01];
+		};
+		moveTo(p){
+			var dx = p.X - this.X;
+			var dy = p.Y - this.Y;
+			this.shift(dx, dy)
 		};
 		draw(ctx, color){
 			if(this.isInArea){
@@ -255,6 +269,7 @@
 		draw(ctx, color){
 			ctx.strokeStyle = this.color || color;
 			ctx.lineWidth = 1;
+			ctx.globalAlpha = 1.0;
 			ctx.beginPath();
 			ctx.moveTo(this.p1.drawX, this.p1.drawY);
 			ctx.lineTo(this.p2.drawX, this.p2.drawY);
@@ -282,6 +297,7 @@
 		};
 		draw(ctx, color){
 			ctx.fillStyle = this.color || color;
+			ctx.globalAlpha = 0.7;
 			ctx.beginPath();
 			ctx.moveTo(this.plist[0].drawX, this.plist[0].drawY);
 			for(var i = 1; i < this.plist.length; i++){
@@ -310,7 +326,6 @@
 			this.cvs    = document.createElement("canvas");
 			this.cvs.style["z-index"] = z;
 			this.color  = color;
-			this.alpha  = 1.0;
 			this.chk    = document.getElementById("chk" + name);
 			this.isReadOnly = isReadOnly;
 			div.appendChild(this.cvs);
@@ -355,7 +370,6 @@
 			this.cvs.classList[(!this.chk || this.chk.checked ? "remove" : "add")]("hide");
 			this.clear();
 			var ctx = this.cvs.getContext("2d");
-			ctx.globalAlpha = this.alpha;
 			for(var i = 0; i < this.obj.length; i++){
 				!(this.obj[i].hidden) ? this.obj[i].draw(ctx, this.color) : "";
 			};
@@ -547,8 +561,56 @@
 			};
 			this.redraw();
 		};
+		mirror(){
+			var maxGrid = this.parent.gridNum;
+			var points = this.getPoints();
+			var minX0 = maxGrid;
+			var minX1 = maxGrid;
+			for(var i = 0; i < points.length - 1; i++){
+				minX0 = (points[i].gridX < minX0) ? points[i].gridX : minX0;
+				points[i].gridX = maxGrid - points[i].gridX;
+				minX1 = (points[i].gridX < minX1) ? points[i].gridX : minX1;
+			};
+			this.shift(minX0 - minX1, 0);
+			this.redraw();
+		};
+		rotate(){
+			var maxGrid = this.parent.gridNum;
+			var points = this.getPoints();
+			var minX0 = maxGrid;
+			var minX1 = maxGrid;
+			var maxX0 = 0;
+			var maxX1 = 0;
+			var minY0 = maxGrid;
+			var minY1 = maxGrid;
+			var maxY0 = 0;
+			var maxY1 = 0;
+			for(var i = 0; i < points.length - 1; i++){
+				minX0 = (points[i].gridX < minX0) ? points[i].gridX : minX0;
+				minY0 = (points[i].gridY < minY0) ? points[i].gridY : minY0;
+				maxX0 = (maxX0 < points[i].gridX) ? points[i].gridX : maxX0;
+				maxY0 = (maxY0 < points[i].gridY) ? points[i].gridY : maxY0;
+				var newX = maxGrid - points[i].gridY;
+				var newY = points[i].gridX;
+				points[i].gridX = newX;
+				points[i].gridY = newY;
+				minX1 = (newX < minX1) ? newX : minX1;
+				minY1 = (newY < minY1) ? newY : minY1;
+				maxX1 = (maxX1 < newX) ? newX : maxX1;
+				maxY1 = (maxY1 < newY) ? newY : maxY1;
+			};
+			var dx = Math.trunc((maxX0 + minX0) / 2 - (maxX1 + minX1) / 2);
+			var dy = Math.trunc((maxY0 + minY0) / 2 - (maxY1 + minY1) / 2);
+			dx = (minX1 + dx < 0) ? -minX1 :
+				 (maxGrid < maxX1 + dx) ? maxGrid - maxX1 :
+				 dx;
+			dy = (minY1 + dy < 0) ? -minY1 :
+				 (maxGrid < maxY1 + dy) ? maxGrid - maxY1 :
+				 dy;
+			this.shift(dx, dy);
+			this.redraw();
+		};
 		redraw(){
-			this.alpha = modeman.isDamageMode ? 0.5 : 1.0;
 			if(!this.isReadOnly){
 				this.obj = [];
 				this.obj = this.obj.concat(this.getPoints());
@@ -585,6 +647,12 @@
 			};
 			isRefresh ? this.parent.putData() : "";
 			this.redraw();
+		};
+		touchStart(event){
+			if(event.touches.length !== 1){
+				event.button = 2;
+				this.mouseUp(event);
+			};
 		};
 		addPoint(event){
 			if(this.isComplete){ this.isComplete = false; };
@@ -646,12 +714,18 @@
 					this.isComplete = true;
 				}
 			}
-			return (this.points.length > 0);
+			var points = this.getPoints();
+			console.log("points", points)
+			if(points.length > 1){
+				points[points.length - 1].moveTo(points[points.length - 2]);
+			};
+			return true;
 		};
 		setEvents(self){
-			this.cvs.addEventListener("mousemove", function(event){ self.mouseMove(event); }, false);
-			this.cvs.addEventListener("mouseout",  function(event){ self.mouseOut(event); },  false);
-			this.cvs.addEventListener("mouseup",   function(event){ self.mouseUp(event); },   false);
+			this.cvs.addEventListener("mousemove",  function(event){ self.mouseMove(event); },  false);
+			this.cvs.addEventListener("mouseout",   function(event){ self.mouseOut(event); },   false);
+			this.cvs.addEventListener("mouseup",    function(event){ self.mouseUp(event); },    false);
+			this.cvs.addEventListener("touchstart", function(event){ self.touchStart(event); }, false);
 		};
 	};
 	class MagicCanvas {
@@ -674,7 +748,7 @@
 		};
 		initCanvas(div, isReadOnly){
 			this.cvsName   = new ExCanvasName(  this, div, "Name",   0, "#000000", isReadOnly);
-			this.cvsDamage = new ExCanvasDamage(this, div, "Damage", 1, "#FFA0A0", isReadOnly);
+			this.cvsDamage = new ExCanvasDamage(this, div, "Damage", 1, "#FF8080", isReadOnly);
 			this.cvsFill   = new ExCanvasFill(  this, div, "Fill",   2, "#00C0FF", isReadOnly);
 			this.cvsGrid   = new ExCanvasGrid(  this, div, "Grid",   3, "#A0A0A0", isReadOnly);
 			this.cvsLine   = new ExCanvasLine(  this, div, "Line",   4, "#0000FF", isReadOnly);
@@ -864,9 +938,12 @@
 			this.btnShiftUp    = document.getElementById("btnShiftUp");
 			this.btnShiftDown  = document.getElementById("btnShiftDown");
 			this.btnShiftRight = document.getElementById("btnShiftRight");
-			this.menuName = document.getElementById("menuName");
-			this.menuSave = document.getElementById("menuSave");
-			this.menuLoad = document.getElementById("menuLoad");
+			this.btnMirror = document.getElementById("btnMirror");
+			this.btnRotate = document.getElementById("btnRotate");
+			this.menuName  = document.getElementById("menuName");
+			this.menuSave  = document.getElementById("menuSave");
+			this.menuLoad  = document.getElementById("menuLoad");
+			this.menuReset = document.getElementById("menuReset");
 		};
 		initTabs(ary){
 			this.tab = TAB_NONE;
@@ -907,6 +984,9 @@
 				this.mode == MODE_SHAPE ||
 				this.mode == MODE_DAMAGE
 			);
+		};
+		get enableRotate(){
+			return this.enableShift && this.mode != MODE_DAMAGE;
 		};
 		get isPC(){
 			return isStandAlone || this.checkFrameMode("P");
@@ -960,9 +1040,12 @@
 			setEnable(this.btnShiftUp,    isMain && this.enableShift);
 			setEnable(this.btnShiftDown,  isMain && this.enableShift);
 			setEnable(this.btnShiftRight, isMain && this.enableShift);
-			setEnable(this.menuName, isMain);
-			setEnable(this.menuSave, isMain);
-			setEnable(this.menuLoad, isMain);
+			setEnable(this.btnMirror, isMain && this.enableRotate);
+			setEnable(this.btnRotate, isMain && this.enableRotate);
+			setEnable(this.menuName,  isMain);
+			setEnable(this.menuSave,  isMain);
+			setEnable(this.menuLoad,  isMain);
+			setEnable(this.menuReset, isMain);
 			if(isMain && this.mode != MODE_NONE && this.buttons[this.mode].disabled){
 				this.setMode(MODE_LINE);
 			};
@@ -1186,6 +1269,14 @@
 		cvsActive.cvsTemp.shift(dx, dy);
 		cvsActive.putData();
 	};
+	var mirror = function(){
+		cvsActive.cvsTemp.mirror();
+		cvsActive.putData();
+	};
+	var rotate = function(){
+		cvsActive.cvsTemp.rotate();
+		cvsActive.putData();
+	};
 
 	var showPalette = function(event){
 		showPopup(event, divPalette);
@@ -1380,7 +1471,25 @@
 		user-select: none;
 	}
 	td.modeButtons {
-		text-align: left;
+		text-align : left;
+		line-height: 32px;
+	}
+	td.shiftButtons {
+		padding    : 0px 2px;
+		line-height: 32px;
+	}
+	td.controlButtons {
+		line-height: 36px;
+	}
+	td.modeButtons input {
+		margin : 2px 1px;
+	}
+	td.shiftButtons input {
+		padding: 2px 8px;
+	}
+	td.controlButtons input {
+		margin : 2px 2px;
+		padding: 2px 10px;
 	}
 	input {
 		border-width : 1px;
@@ -1605,14 +1714,23 @@
 						<input id="btnMode23" type="button" value="★" onclick="modeman.setMode(23)" title="塗り削除" />
 						<input id="btnMode24" type="button" value="■" onclick="modeman.setMode(24)" title="ダメージ削除" />
 					</td>
-					<td>
-						<input id="btnSubmit" type="button" value="決定"       onclick="submit()" />
-						<input id="btnCancel" type="button" value="キャンセル" onclick="cancel()" />
-						<br>
+					<td class="shiftButtons">
 						<input id="btnShiftLeft"  type="button" value="←" onclick="shiftCanvas(-1,  0)" />
+					</td>
+					<td class="shiftButtons">
 						<input id="btnShiftUp"    type="button" value="↑" onclick="shiftCanvas( 0, -1)" />
-						<input id="btnShiftDown"  type="button" value="↓" onclick="shiftCanvas( 0,  1)" />
+						<br>
+ 						<input id="btnShiftDown"  type="button" value="↓" onclick="shiftCanvas( 0,  1)" />
+					</td>
+					<td class="shiftButtons">
 						<input id="btnShiftRight" type="button" value="→" onclick="shiftCanvas( 1,  0)" />
+					</td>
+					<td class="controlButtons">
+						<input id="btnSubmit" type="button" value="○"       onclick="submit()" />
+						<input id="btnCancel" type="button" value="×" onclick="cancel()" />
+						<br>
+						<input id="btnMirror" type="button" value="⇔" onclick="mirror()" />
+						<input id="btnRotate" type="button" value="↻" onclick="rotate()" />
 					</td>
 					<td>
 						<input id="btnSync" type="button" value="同期無" onclick="startSync()" class="sync" disabled /><br>
