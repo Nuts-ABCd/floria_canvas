@@ -503,7 +503,7 @@
 			for(var i = 0; i < this.points.length; i++){
 				var d = this.points[i].getDistance(p);
 				if(d < minDis){
-					ret = this.points[i];
+					ret = this.points[i].copy();
 					minDis = d;
 				};
 			};
@@ -623,6 +623,7 @@
 			return super.serialize("CT:");
 		};
 		mouseMove(event){
+			if(this.isComplete && modeman.isFillMode){ return; };
 			this.points.pop();
 			this.points.push(getMousePos(event));
 			if(this.points.length >= 2){
@@ -655,6 +656,7 @@
 			};
 		};
 		addPoint(event){
+			if(this.isComplete && modeman.isFillMode){ return false; };
 			if(this.isComplete){ this.isComplete = false; };
 			var pos = getMousePos(event);
 			var len = this.points.length;
@@ -715,7 +717,6 @@
 				}
 			}
 			var points = this.getPoints();
-			console.log("points", points)
 			if(points.length > 1){
 				points[points.length - 1].moveTo(points[points.length - 2]);
 			};
@@ -725,7 +726,7 @@
 			this.cvs.addEventListener("mousemove",  function(event){ self.mouseMove(event); },  false);
 			this.cvs.addEventListener("mouseout",   function(event){ self.mouseOut(event); },   false);
 			this.cvs.addEventListener("mouseup",    function(event){ self.mouseUp(event); },    false);
-			this.cvs.addEventListener("touchstart", function(event){ self.touchStart(event); }, false);
+			//this.cvs.addEventListener("touchstart", function(event){ self.touchStart(event); }, false);
 		};
 	};
 	class MagicCanvas {
@@ -738,6 +739,8 @@
 			this.cvsLine;
 			this.cvsTemp;
 			this.cvsAry;
+			this.history = [];
+			this.historyIndex = -1;
 			this.waitPut = false;
 			this.initGrid(gridNum);
 			this.initCanvas(this.div, isReadOnly);
@@ -824,6 +827,27 @@
 			this.cvsLine.redraw();
 
 		};
+		setHistory = function(){
+			this.historyIndex++;
+			this.history = this.history.slice(0, this.historyIndex);
+			this.history.push(this.serialize());
+		};
+		undo = function(){
+			if(this.enableUndo){
+				this.loadData(this.history[--this.historyIndex]);
+			};
+		};
+		get enableUndo(){
+			return this.history[this.historyIndex - 1];
+		};
+		redo = function(){
+			if(this.enableRedo){
+				this.loadData(this.history[++this.historyIndex]);
+			};
+		};
+		get enableRedo(){
+			return this.history[this.historyIndex + 1];
+		};
 		redrawAll = function(){
 			for(var i = 0; i < this.cvsAry.length; i++){
 				this.cvsAry[i].setScale();
@@ -831,6 +855,8 @@
 			};
 		};
 		resetAll = function(gridNum){
+			this.history = [];
+			this.historyIndex = -1;
 			this.resize(gridNum);
 			for(var i = 0; i < this.cvsAry.length; i++){
 				this.cvsAry[i].initialize();
@@ -940,6 +966,8 @@
 			this.btnShiftRight = document.getElementById("btnShiftRight");
 			this.btnMirror = document.getElementById("btnMirror");
 			this.btnRotate = document.getElementById("btnRotate");
+			this.btnUndo   = document.getElementById("btnUndo");
+			this.btnRedo   = document.getElementById("btnRedo");
 			this.menuName  = document.getElementById("menuName");
 			this.menuSave  = document.getElementById("menuSave");
 			this.menuLoad  = document.getElementById("menuLoad");
@@ -1042,6 +1070,8 @@
 			setEnable(this.btnShiftRight, isMain && this.enableShift);
 			setEnable(this.btnMirror, isMain && this.enableRotate);
 			setEnable(this.btnRotate, isMain && this.enableRotate);
+			setEnable(this.btnUndo,   isMain && parent.enableUndo);
+			setEnable(this.btnRedo,   isMain && parent.enableRedo);
 			setEnable(this.menuName,  isMain);
 			setEnable(this.menuSave,  isMain);
 			setEnable(this.menuLoad,  isMain);
@@ -1233,7 +1263,8 @@
 			cvsAry[i].clearAll();
 		};
 	};
-	var submit = function(){
+	var submit = function(useHistory = false){
+		if(useHistory && cvsActive.historyIndex < 0) { cvsActive.setHistory(); };
 		switch(true){
 			case modeman.mode == MODE_DEL_L:
 			case modeman.mode == MODE_DEL_S: cvsActive.delLine();   break;
@@ -1243,6 +1274,7 @@
 			case modeman.isFillMode:   cvsActive.setFill();   break;
 			case modeman.isDamageMode: cvsActive.setDamage(); break;
 		};
+		if(useHistory) { cvsActive.setHistory(); };
 		var data = cvsActive.serialize();
 		modeman.saveData(data);
 		if(modeman.isDeleteMode){
@@ -1276,6 +1308,14 @@
 	var rotate = function(){
 		cvsActive.cvsTemp.rotate();
 		cvsActive.putData();
+	};
+	var undo = function(){
+		cvsActive.undo();
+		submit();
+	};
+	var redo = function(){
+		cvsActive.redo();
+		submit();
 	};
 
 	var showPalette = function(event){
@@ -1460,13 +1500,13 @@
 </script>
 <script language="JavaScript" src="./js/jquery-3.7.1.min.js"></script>
 <script language="JavaScript" src="./js/net.js?v1.0.1"></script>
-<script language="JavaScript" src="./js/sync.js?v1.0.1"></script>
+<script language="JavaScript" src="./js/sync.js?v1.0.2"></script>
 <style>
 	div {
 		user-select: none;
 	}
 	td {
-		padding    : 0px 15px;
+		padding    : 0px 10px;
 		text-align : center;
 		user-select: none;
 	}
@@ -1475,7 +1515,7 @@
 		line-height: 32px;
 	}
 	td.shiftButtons {
-		padding    : 0px 2px;
+		padding    : 0px;
 		line-height: 32px;
 	}
 	td.controlButtons {
@@ -1483,13 +1523,17 @@
 	}
 	td.modeButtons input {
 		margin : 2px 1px;
+		width  : 28px;
+		height : 28px;
 	}
 	td.shiftButtons input {
 		padding: 2px 8px;
 	}
 	td.controlButtons input {
-		margin : 2px 2px;
-		padding: 2px 10px;
+		margin    : 2px 2px;
+		padding   : 2px 10px;
+		min-width : 36px;
+		min-height: 28px;
 	}
 	input {
 		border-width : 1px;
@@ -1687,8 +1731,9 @@
 		<div class="head">
 			<table class="control">
 				<tr>
-					<td>
+					<td class="controlButtons">
 						<input id="btnScaleUp"   type="button" value="＋" onclick="setScale(-1)" title="拡大" />
+						<br>
 						<input id="btnScaleDown" type="button" value="－" onclick="setScale( 1)" title="縮小" />
 					</td>
 					<td>
@@ -1714,25 +1759,32 @@
 						<input id="btnMode23" type="button" value="★" onclick="modeman.setMode(23)" title="塗り削除" />
 						<input id="btnMode24" type="button" value="■" onclick="modeman.setMode(24)" title="ダメージ削除" />
 					</td>
-					<td class="shiftButtons">
-						<input id="btnShiftLeft"  type="button" value="←" onclick="shiftCanvas(-1,  0)" />
-					</td>
-					<td class="shiftButtons">
-						<input id="btnShiftUp"    type="button" value="↑" onclick="shiftCanvas( 0, -1)" />
-						<br>
- 						<input id="btnShiftDown"  type="button" value="↓" onclick="shiftCanvas( 0,  1)" />
-					</td>
-					<td class="shiftButtons">
-						<input id="btnShiftRight" type="button" value="→" onclick="shiftCanvas( 1,  0)" />
+					<td class="controlButtons">
+						<table><tr>
+							<td class="shiftButtons">
+								<input id="btnShiftLeft"  type="button" value="←" onclick="shiftCanvas(-1,  0)" />
+							</td><td class="shiftButtons">
+								<input id="btnShiftUp"    type="button" value="↑" onclick="shiftCanvas( 0, -1)" />
+								<br>
+								<input id="btnShiftDown"  type="button" value="↓" onclick="shiftCanvas( 0,  1)" />
+							</td><td class="shiftButtons">
+								<input id="btnShiftRight" type="button" value="→" onclick="shiftCanvas( 1,  0)" />
+							</td>
+						</tr></table>
 					</td>
 					<td class="controlButtons">
-						<input id="btnSubmit" type="button" value="○"       onclick="submit()" />
-						<input id="btnCancel" type="button" value="×" onclick="cancel()" />
+						<input id="btnSubmit" type="button" value="○" onclick="submit(true)" title="決定" />
+						<input id="btnCancel" type="button" value="×" onclick="cancel()" title="キャンセル" />
 						<br>
-						<input id="btnMirror" type="button" value="⇔" onclick="mirror()" />
-						<input id="btnRotate" type="button" value="↻" onclick="rotate()" />
+						<input id="btnMirror" type="button" value="⇔" onclick="mirror()" title="反転" />
+						<input id="btnRotate" type="button" value="↻" onclick="rotate()" title="回転" />
 					</td>
-					<td>
+					<td class="controlButtons">
+						<input id="btnUndo" type="button" value="↶" onclick="undo()" title="元に戻す" />
+						<br>
+						<input id="btnRedo" type="button" value="↷" onclick="redo()" title="やり直し" />
+					</td>
+					<td class="controlButtons">
 						<input id="btnSync" type="button" value="同期無" onclick="startSync()" class="sync" disabled /><br>
 						<input id="btnMenu" type="button" value="≡"     onclick="showMenu(event)" title="メニュー" />
 						<input id="btnHelp" type="button" value="？"     onclick="showHelp(event)" title="ヘルプ" />
