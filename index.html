@@ -48,6 +48,47 @@
 		"#E0E000"
 	];
 
+	const PLANT_DATA = {
+		"11" : ["CT:P:4800_3600~P:7200_8400"],
+		"12" : ["CT:P:4800_4800~P:7200_8400"],
+		"13" : ["CT:P:6000_4800~P:6000_8400"],
+		"14" : ["CT:P:6000_4800~P:9600_8400"],
+		"15" : ["CT:P:4800_3600~P:4800_8400", "CT:P:4800_3600~P:8400_6000", "CT:P:8400_6000~P:4800_8400"],
+		"16" : ["CT:P:4800_8400~P:4800_3600", "CT:P:9600_8400~P:4800_3600", "CT:P:9600_3600~P:9600_8400"],
+
+		"22" : ["CT:P:4800_3600~P:7200_8400", "CT:P:7200_8400~P:9600_3600"],
+		"23" : ["CT:P:4800_4800~P:7200_8400", "CT:P:7200_8400~P:9600_4800"],
+		"24" : ["CT:P:6000_4800~P:6000_8400", "CT:P:6000_8400~P:8400_4800"],
+		"25" : ["CT:P:6000_3600~P:6000_8400", "CT:P:6000_8400~P:8400_3600"],
+		"26" : ["CT:P:4800_8400~P:9600_8400", "CT:P:9600_8400~P:9600_3600", "CT:P:9600_3600~P:4800_8400"],
+
+		"32" : ["CT:P:6000_4800~P:6000_7200"],
+		"33" : ["CT:P:6000_4800~P:7200_7200"],
+		"34" : ["CT:P:6000_4800~P:8400_7200"],
+		"35" : ["CT:P:4800_4800~P:4800_7200", "CT:P:4800_7200~P:9600_4800"],
+		"36" : ["CT:P:4800_6000~P:7200_8400", "CT:P:7200_8400~P:9600_6000"],
+
+		"42" : ["CT:P:4800_3600~P:6000_8400"],
+		"43" : ["CT:P:4800_3600~P:8400_8400"],
+		"44" : ["CT:P:4800_8400~P:9600_8400", "CT:P:7200_8400~P:7200_3600"],
+		"45" : ["CT:P:4800_8400~P:4800_3600", "CT:P:4800_3600~P:9600_8400"],
+		"46" : ["CT:P:4800_8400~P:4800_3600", "CT:P:4800_8400~P:9600_8400", "CT:P:4800_8400~P:9600_3600"],
+
+		"52" : ["CT:P:6000_3600~P:6000_8400"],
+		"53" : ["CT:P:6000_4800~P:6000_8400", "CT:P:6000_8400~P:9600_8400"],
+		"54" : ["CT:P:4800_6000~P:9600_6000", "CT:P:7200_6000~P:7200_8400"],
+		"55" : ["CT:P:4800_8400~P:4800_4800", "CT:P:4800_4800~P:9600_4800", "CT:P:9600_4800~P:9600_8400"],
+		"56" : ["CT:P:4800_3600~P:4800_8400", "CT:P:4800_6000~P:9600_6000", "CT:P:9600_3600~P:9600_8400"],
+
+		"61" : ["CT:P:4800_3600~P:9600_8400"],
+		"62" : ["CT:P:6000_3600~P:6000_8400", "CT:P:6000_8400~P:8400_8400"],
+		"63" : ["CT:P:7200_8400~P:7200_3600", "CT:P:4800_6000~P:7200_3600", "CT:P:9600_6000~P:7200_3600"],
+		"64" : ["CT:P:4800_3600~P:9600_8400", "CT:P:9600_3600~P:4800_8400"],
+		"65" : ["CT:P:7200_8400~P:7200_3600", "CT:P:4800_8400~P:7200_3600", "CT:P:9600_8400~P:7200_3600"],
+		"66" : ["CT:P:4800_8400~P:4800_3600", "CT:P:4800_3600~P:7200_8400", "CT:P:7200_8400~P:9600_3600", "CT:P:9600_3600~P:9600_8400"],
+
+	};
+
 	// サンプルデータ
 	var canvasData = [
 		"",
@@ -73,7 +114,7 @@
 		set gridY(value){ this.Y = value * GRID_SIZE; };
 		get drawX(){ return Math.round(this.X / scale) + GRID_PADDING_L; };
 		get drawY(){ return Math.round(this.Y / scale) + GRID_PADDING_T; };
-		copy(){
+		clone(){
 			return new Point(this.X, this.Y);
 		};
 		moveTo(p){
@@ -503,7 +544,7 @@
 			for(var i = 0; i < this.points.length; i++){
 				var d = this.points[i].getDistance(p);
 				if(d < minDis){
-					ret = this.points[i].copy();
+					ret = this.points[i].clone();
 					minDis = d;
 				};
 			};
@@ -621,6 +662,17 @@
 		serialize(){
 			this.setObjects();
 			return super.serialize("CT:");
+		};
+		loadLines(data){
+			for(var i = 0; i < data.length; i++){
+				this.points = ExCanvas.parseObjects(data[i]);
+				this.addLine();
+				this.pstack.push(this.points);
+				this.points = [this.points.at(-1)];
+				this.lstack.push(this.lines);
+				this.lines = [];
+			}
+			this.isComplete = true;
 		};
 		mouseMove(event){
 			if(this.isComplete && modeman.isFillMode){ return; };
@@ -1264,17 +1316,19 @@
 		};
 	};
 	var submit = function(useHistory = false){
-		if(useHistory && cvsActive.historyIndex < 0) { cvsActive.setHistory(); };
-		switch(true){
-			case modeman.mode == MODE_DEL_L:
-			case modeman.mode == MODE_DEL_S: cvsActive.delLine();   break;
-			case modeman.mode == MODE_DEL_F: cvsActive.delFill();   break;
-			case modeman.mode == MODE_DEL_D: cvsActive.delDamage(); break;
-			case modeman.isLineMode:   cvsActive.setLine();   break;
-			case modeman.isFillMode:   cvsActive.setFill();   break;
-			case modeman.isDamageMode: cvsActive.setDamage(); break;
+		if(useHistory){
+			if(cvsActive.historyIndex < 0) { cvsActive.setHistory(); };
+			switch(true){
+				case modeman.mode == MODE_DEL_L:
+				case modeman.mode == MODE_DEL_S: cvsActive.delLine();   break;
+				case modeman.mode == MODE_DEL_F: cvsActive.delFill();   break;
+				case modeman.mode == MODE_DEL_D: cvsActive.delDamage(); break;
+				case modeman.isLineMode:   cvsActive.setLine();   break;
+				case modeman.isFillMode:   cvsActive.setFill();   break;
+				case modeman.isDamageMode: cvsActive.setDamage(); break;
+			};
+			cvsActive.setHistory();
 		};
-		if(useHistory) { cvsActive.setHistory(); };
 		var data = cvsActive.serialize();
 		modeman.saveData(data);
 		if(modeman.isDeleteMode){
@@ -1321,6 +1375,9 @@
 	var showPalette = function(event){
 		showPopup(event, divPalette);
 	};
+	var showPlant = function(event){
+		showPopup(event, divPlant);
+	};
 	var showMenu = function(event){
 		showPopup(event, divMenu);
 	};
@@ -1342,6 +1399,7 @@
 	};
 	var hidePopup = function(div){
 		div !== divPalette ? setHide(divPalette) : "";
+		div !== divPlant   ? setHide(divPlant)   : "";
 		div !== divMenu    ? setHide(divMenu)    : "";
 		div !== divReadme  ? setHide(divReadme)  : "";
 		div !== divHelp    ? setHide(divHelp)    : "";
@@ -1350,7 +1408,13 @@
 	var setColor = function(idx){
 		hidePopup();
 		modeman.setLineColor(idx);
-		//modeman.setFillColor(idx);
+		modeman.setFillColor(idx);
+	};
+	var putPlant = function(idx){
+		hidePopup();
+		cancel();
+		cvsActive.cvsTemp.loadLines(PLANT_DATA[idx]);
+		cvsActive.cvsTemp.redraw();
 	};
 	var setName = function(){
 		hidePopup();
@@ -1660,11 +1724,25 @@
 	}
 	.palette {
 		top    : 38px;
-		left   : 450px;
+		left   : 385px;
 		padding: 6px 6px;
 	}
 	.paletteItem {
 		width        : 20px;
+		margin       : 2px 2px;
+		border       : none;
+		border-radius: 0px;
+		cursor       : pointer;
+		user-select  : none;
+	}
+	.plant {
+		top    : 38px;
+		left   : 10px;
+		padding: 6px 6px;
+	}
+	.plantItem {
+		width        : 130px;
+		height       : 36px;
 		margin       : 2px 2px;
 		border       : none;
 		border-radius: 0px;
@@ -1751,7 +1829,8 @@
 						<input id="btnMode12" type="button" value="☆" onclick="modeman.setMode(12)" title="多角形" />
 						<input id="btnMode13" type="button" value="★" onclick="modeman.setMode(13)" title="塗潰し" />
 						<input id="btnMode14" type="button" value="■" onclick="modeman.setMode(14)" title="ダメージ塗り" />
-						<input id="btnPalette" hidden />
+						<input id="btnPalette" type="button" value="　" onclick="showPalette(event)" title="色変更"/>
+						<input id="btnPlant"  type="button" value="🌳" onclick="showPlant(event)" title="魔法植物"/>
 						<br>
 						<span class="label">削除 :</span>
 						<input id="btnMode21" type="button" value="／" onclick="modeman.setMode(21)" title="直線削除" />
@@ -1801,6 +1880,49 @@
 				<input id="palette5" class="paletteItem" type="button" value="" onclick="setColor(5)" />
 				<input id="palette6" class="paletteItem" type="button" value="" onclick="setColor(6)" />
 				<input id="palette7" class="paletteItem" type="button" value="" onclick="setColor(7)" />
+			</div>
+			<div id="divPlant" class="popup plant hide" onclick="cancelEvent(event)">
+				<input id="plant11" class="plantItem" type="button" value="フシギ菜" onclick="putPlant(11)" />
+				<input id="plant12" class="plantItem" type="button" value="ダシノクサ" onclick="putPlant(12)" />
+				<input id="plant13" class="plantItem" type="button" value="イッポンツクシ" onclick="putPlant(13)" />
+				<input id="plant14" class="plantItem" type="button" value="アールホワイト" onclick="putPlant(14)" />
+				<input id="plant15" class="plantItem" type="button" value="ネムリノリンゴ" onclick="putPlant(15)" />
+				<input id="plant16" class="plantItem" type="button" value="ウルシカブレ" onclick="putPlant(16)" />
+				<br>
+				<input id="plant21" class="plantItem" type="button" value="フシギ菜" onclick="putPlant(11)" />
+				<input id="plant22" class="plantItem" type="button" value="オオアマガサ" onclick="putPlant(22)" />
+				<input id="plant23" class="plantItem" type="button" value="蝶のお宿" onclick="putPlant(23)" />
+				<input id="plant24" class="plantItem" type="button" value="ベルコーラス" onclick="putPlant(24)" />
+				<input id="plant25" class="plantItem" type="button" value="タカネノハナ" onclick="putPlant(25)" />
+				<input id="plant26" class="plantItem" type="button" value="太陽ヒマワリ" onclick="putPlant(26)" />
+				<br>
+				<input id="plant31" class="plantItem" type="button" value="フシギ菜" onclick="putPlant(11)" />
+				<input id="plant32" class="plantItem" type="button" value="サワーベリー" onclick="putPlant(32)" />
+				<input id="plant33" class="plantItem" type="button" value="ヌメリゴケ" onclick="putPlant(33)" />
+				<input id="plant34" class="plantItem" type="button" value="コンソメダシノクサ" onclick="putPlant(34)" />
+				<input id="plant35" class="plantItem" type="button" value="ウロタモモ" onclick="putPlant(35)" />
+				<input id="plant36" class="plantItem" type="button" value="白鳥蓮" onclick="putPlant(36)" />
+				<br>
+				<input id="plant41" class="plantItem" type="button" value="フシギ菜" onclick="putPlant(11)" />
+				<input id="plant42" class="plantItem" type="button" value="ヨイドレナッツ" onclick="putPlant(42)" />
+				<input id="plant43" class="plantItem" type="button" value="アシナガパイン" onclick="putPlant(43)" />
+				<input id="plant44" class="plantItem" type="button" value="マジカルバナナ" onclick="putPlant(44)" />
+				<input id="plant45" class="plantItem" type="button" value="オバケカボチャ" onclick="putPlant(45)" />
+				<input id="plant46" class="plantItem" type="button" value="メガレシア" onclick="putPlant(46)" />
+				<br>
+				<input id="plant51" class="plantItem" type="button" value="フシギ菜" onclick="putPlant(11)" />
+				<input id="plant52" class="plantItem" type="button" value="ヒムロツユクサ" onclick="putPlant(52)" />
+				<input id="plant53" class="plantItem" type="button" value="オオキナカブ" onclick="putPlant(53)" />
+				<input id="plant54" class="plantItem" type="button" value="モリノコタツ" onclick="putPlant(54)" />
+				<input id="plant55" class="plantItem" type="button" value="コケモモイワ" onclick="putPlant(55)" />
+				<input id="plant56" class="plantItem" type="button" value="ケンロウスギ" onclick="putPlant(56)" />
+				<br>
+				<input id="plant51" class="plantItem" type="button" value="巨大化したフシギ菜" onclick="putPlant(61)" />
+				<input id="plant52" class="plantItem" type="button" value="ドラゴニウム" onclick="putPlant(62)" />
+				<input id="plant53" class="plantItem" type="button" value="星降る天蓋" onclick="putPlant(63)" />
+				<input id="plant54" class="plantItem" type="button" value="エリクシルの雫" onclick="putPlant(64)" />
+				<input id="plant55" class="plantItem" type="button" value="金成木" onclick="putPlant(65)" />
+				<input id="plant56" class="plantItem" type="button" value="蓬莱玉樹" onclick="putPlant(66)" />
 			</div>
 			<div id="divMenu" class="popup menu hide" onclick="cancelEvent(event)">
 				<input id="menuName"  class="menuItem" type="button" value="名前変更"   onclick="setName()" />
